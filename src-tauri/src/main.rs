@@ -1,7 +1,92 @@
+#![cfg_attr(
+    all(not(debug_assertions), target_os = "windows"),
+    windows_subsystem = "windows"
+)]
 use std::fs;
 use std::path::PathBuf;
+use std::os::windows::fs as windows_fs;
+use std::env;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
+
+
+// Helper function to check if a directory contains a "GSX Profile" folder
+fn contains_gsx_profile(dir_path: &PathBuf) -> bool {
+    // Check if this directory is named "GSX Profile"
+    if dir_path.file_name().map_or(false, |name| name == "GSX Profile") {
+        return true;
+    }
+
+    // Check subdirectories
+    if dir_path.is_dir() {
+        match fs::read_dir(dir_path) {
+            Ok(entries) => {
+                for entry_result in entries {
+                    if let Ok(entry) = entry_result {
+                        let path = entry.path();
+                        if path.is_dir() && contains_gsx_profile(&path) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            Err(_) => return false,
+        }
+    }
+    
+    false
+}
+
+#[tauri::command]
+fn activate_profiles(selected_files: Vec<String>) -> Result<String, String> {
+    // Get current user's profile directory
+    let user_profile = env::var("USERPROFILE")
+        .map_err(|_| "Failed to get user profile directory".to_string())?;
+    
+    // Create target directory if it doesn't exist
+    let target_dir = format!("{}\\AppData\\Roaming\\Virtuali\\GSX\\MSFS", user_profile);
+    fs::create_dir_all(&target_dir)
+        .map_err(|e| format!("Failed to create target directory: {}", e))?;
+    
+    // Clear existing files in the target directory
+    for entry in fs::read_dir(&target_dir).map_err(|e| format!("Failed to read target directory: {}", e))? {
+        if let Ok(entry) = entry {
+            let path = entry.path();
+            if path.is_file() {
+                fs::remove_file(&path)
+                    .map_err(|e| format!("Failed to remove file {}: {}", path.display(), e))?;
+            } else if path.is_symlink() {
+                fs::remove_file(&path)
+                    .map_err(|e| format!("Failed to remove symlink {}: {}", path.display(), e))?;
+            }
+        }
+    }
+    
+    // Create symlinks for selected files
+    let mut activated_count = 0;
+    for file_path in selected_files {
+        let source_path = PathBuf::from(&file_path);
+        
+        if !source_path.exists() {
+            return Err(format!("Source file does not exist: {}", file_path));
+        }
+        
+        let file_name = source_path.file_name()
+            .ok_or_else(|| "Invalid file path".to_string())?
+            .to_string_lossy()
+            .to_string();
+        
+        let target_path = format!("{}\\{}", target_dir, file_name);
+        
+        // Create symbolic link
+        windows_fs::symlink_file(&source_path, &target_path)
+            .map_err(|e| format!("Failed to create symlink: {}", e))?;
+        
+        activated_count += 1;
+    }
+    
+    Ok(format!("Successfully activated {} profiles", activated_count))
+}
 
 #[tauri::command]
 fn read_folder_contents(folder_path: String) -> Result<Vec<TreeDataItem>, String> {
@@ -11,29 +96,128 @@ fn read_folder_contents(folder_path: String) -> Result<Vec<TreeDataItem>, String
     }
 
     let mut items = Vec::new();
-    for entry in fs::read_dir(&path).map_err(|e| e.to_string())? {
+    match fs::read_dir(&path) {
+        Ok(entries) => {
+            for entry_result in entries {
+                match entry_result {
+                    Ok(entry) => {
+                        let path = entry.path();
+                        if path.is_dir() {
+                            // Only process directories
+                            let name = path.file_name().unwrap().to_string_lossy().to_string();
+                            let id = name.clone();
+                            
+                            // Get child directories that contain GSX Profile folders
+                            match read_relevant_folders(&path) {
+                                Ok(children_result) => {
+                                    // Only include this directory if it contains GSX Profile or has valid children
+                                    if !children_result.is_empty() || contains_gsx_profile(&path) {
+                                        items.push(TreeDataItem {
+                                            id,
+                                            name,
+                                            children: Some(children_result),
+                                        });
+                                    }
+                                },
+                                Err(e) if e.contains("Access is denied") || e.contains("Permission denied") => {
+                                    // Skip directories we can't access
+                                    continue;
+                                },
+                                Err(e) => return Err(e),
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        // Skip entries we can't read
+                        continue;
+                    }
+                }
+            }
+            Ok(items)
+        },
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                Err("Access denied: You don't have permission to read this folder".into())
+            } else {
+                Err(format!("Error reading folder: {}", e))
+            }
+        }
+    }
+}
+
+// Helper function to read only relevant folders
+fn read_relevant_folders(dir_path: &PathBuf) -> Result<Vec<TreeDataItem>, String> {
+    let mut items = Vec::new();
+    
+    for entry in fs::read_dir(dir_path).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
-        let name = path.file_name().unwrap().to_string_lossy().to_string();
-        let id = name.clone();
-
-        let item = if path.is_dir() {
-            TreeDataItem {
-                id,
-                name,
-                children: Some(read_folder_contents(path.to_string_lossy().to_string())?),
+        
+        if path.is_dir() {
+            let name = path.file_name().unwrap().to_string_lossy().to_string();
+            let id = name.clone();
+            
+            if name == "GSX Profile" {
+                // Found a GSX Profile folder, read and include its contents
+                let gsx_files = read_gsx_profile_contents(&path)?;
+                items.push(TreeDataItem {
+                    id,
+                    name,
+                    children: Some(gsx_files), // Add the files inside GSX Profile folder
+                });
+            } else {
+                // Check if this directory contains GSX Profile folders
+                let children_result = read_relevant_folders(&path)?;
+                
+                if !children_result.is_empty() {
+                    // Only add directories that contain GSX Profile folders
+                    items.push(TreeDataItem {
+                        id,
+                        name,
+                        children: Some(children_result),
+                    });
+                }
             }
-        } else {
-            TreeDataItem {
-                id,
-                name,
-                children: None,
-            }
-        };
-
-        items.push(item);
+        }
     }
+    
+    Ok(items)
+}
 
+// Helper function to read files inside GSX Profile folders
+fn read_gsx_profile_contents(dir_path: &PathBuf) -> Result<Vec<TreeDataItem>, String> {
+    let mut items = Vec::new();
+    
+    for entry in fs::read_dir(dir_path).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        
+        if path.is_file() {
+            // Include the file in the tree
+            let name = path.file_name().unwrap().to_string_lossy().to_string();
+            let id = format!("{}/{}", dir_path.to_string_lossy(), name); // Use full path as ID for uniqueness
+            
+            items.push(TreeDataItem {
+                id,
+                name,
+                children: None, // Files don't have children
+            });
+        } else if path.is_dir() {
+            // If there are subdirectories in GSX Profile, recursively include them
+            let name = path.file_name().unwrap().to_string_lossy().to_string();
+            let id = format!("{}/{}", dir_path.to_string_lossy(), name);
+            let children = read_gsx_profile_contents(&path)?;
+            
+            if !children.is_empty() {
+                items.push(TreeDataItem {
+                    id,
+                    name,
+                    children: Some(children),
+                });
+            }
+        }
+    }
+    
     Ok(items)
 }
 
@@ -62,7 +246,7 @@ async fn select_folder(app: AppHandle) -> Result<String, String> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![read_folder_contents, select_folder])
+        .invoke_handler(tauri::generate_handler![read_folder_contents, select_folder, activate_profiles])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");
 }

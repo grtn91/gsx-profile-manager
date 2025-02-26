@@ -12,6 +12,11 @@ const selectedTreeVariants = cva(
     'before:opacity-100 before:bg-accent/70 text-accent-foreground'
 )
 
+// Add this new variant for selected files
+const selectedFileVariants = cva(
+    'before:opacity-100 before:bg-green-200 dark:before:bg-green-900 text-green-800 dark:text-green-300'
+)
+
 interface TreeDataItem {
     id: string
     name: string
@@ -25,43 +30,63 @@ interface TreeDataItem {
 
 type TreeProps = React.HTMLAttributes<HTMLDivElement> & {
     data: TreeDataItem[] | TreeDataItem
-    initialSelectedItemId?: string
+    initialSelectedItemIds?: string[] // Changed to array
     onSelectChange?: (item: TreeDataItem | undefined) => void
     expandAll?: boolean
     defaultNodeIcon?: any
     defaultLeafIcon?: any
+    selectedItemIds?: string[] // New prop to accept external control
 }
 
 const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
     (
         {
             data,
-            initialSelectedItemId,
+            initialSelectedItemIds = [], // Default to empty array
             onSelectChange,
             expandAll,
             defaultLeafIcon,
             defaultNodeIcon,
             className,
+            selectedItemIds: externalSelectedItemIds, // New prop
             ...props
         },
         ref
     ) => {
-        const [selectedItemId, setSelectedItemId] = React.useState<
-            string | undefined
-        >(initialSelectedItemId)
+        const [internalSelectedItemIds, setInternalSelectedItemIds] = React.useState<string[]>(
+            initialSelectedItemIds
+        )
+        
+        // Use external IDs if provided, otherwise use internal state
+        const selectedItemIds = externalSelectedItemIds || internalSelectedItemIds
 
         const handleSelectChange = React.useCallback(
             (item: TreeDataItem | undefined) => {
-                setSelectedItemId(item?.id)
+                if (!item) return
+                
+                // If no external control, manage internally
+                if (!externalSelectedItemIds) {
+                    setInternalSelectedItemIds(prev => {
+                        // Toggle selection: if already selected, remove it; otherwise add it
+                        const isSelected = prev.includes(item.id)
+                        if (isSelected) {
+                            return prev.filter(id => id !== item.id)
+                        } else {
+                            return [...prev, item.id]
+                        }
+                    })
+                }
+                
+                // Call the external handler if provided
                 if (onSelectChange) {
                     onSelectChange(item)
                 }
             },
-            [onSelectChange]
+            [onSelectChange, externalSelectedItemIds]
         )
 
         const expandedItemIds = React.useMemo(() => {
-            if (!initialSelectedItemId) {
+            if (initialSelectedItemIds.length === 0) {
                 return [] as string[]
             }
 
@@ -69,33 +94,33 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
 
             function walkTreeItems(
                 items: TreeDataItem[] | TreeDataItem,
-                targetId: string
+                targetIds: string[]
             ) {
                 if (items instanceof Array) {
                     for (let i = 0; i < items.length; i++) {
                         ids.push(items[i]!.id)
-                        if (walkTreeItems(items[i]!, targetId) && !expandAll) {
+                        if (walkTreeItems(items[i]!, targetIds) && !expandAll) {
                             return true
                         }
                         if (!expandAll) ids.pop()
                     }
-                } else if (!expandAll && items.id === targetId) {
+                } else if (!expandAll && targetIds.includes(items.id)) {
                     return true
                 } else if (items.children) {
-                    return walkTreeItems(items.children, targetId)
+                    return walkTreeItems(items.children, targetIds)
                 }
             }
 
-            walkTreeItems(data, initialSelectedItemId)
+            walkTreeItems(data, initialSelectedItemIds)
             return ids
-        }, [data, expandAll, initialSelectedItemId])
+        }, [data, expandAll, initialSelectedItemIds])
 
         return (
             <div className={cn('overflow-hidden relative p-2', className)}>
                 <TreeItem
                     data={data}
                     ref={ref}
-                    selectedItemId={selectedItemId}
+                    selectedItemIds={selectedItemIds}
                     handleSelectChange={handleSelectChange}
                     expandedItemIds={expandedItemIds}
                     defaultLeafIcon={defaultLeafIcon}
@@ -109,7 +134,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
 TreeView.displayName = 'TreeView'
 
 type TreeItemProps = TreeProps & {
-    selectedItemId?: string
+    selectedItemIds: string[] // Changed to array
     handleSelectChange: (item: TreeDataItem | undefined) => void
     expandedItemIds: string[]
     defaultNodeIcon?: any
@@ -121,7 +146,7 @@ const TreeItem = React.forwardRef<HTMLDivElement, TreeItemProps>(
         {
             className,
             data,
-            selectedItemId,
+            selectedItemIds,
             handleSelectChange,
             expandedItemIds,
             defaultNodeIcon,
@@ -141,7 +166,7 @@ const TreeItem = React.forwardRef<HTMLDivElement, TreeItemProps>(
                             {item.children ? (
                                 <TreeNode
                                     item={item}
-                                    selectedItemId={selectedItemId}
+                                    selectedItemIds={selectedItemIds}
                                     expandedItemIds={expandedItemIds}
                                     handleSelectChange={handleSelectChange}
                                     defaultNodeIcon={defaultNodeIcon}
@@ -150,7 +175,7 @@ const TreeItem = React.forwardRef<HTMLDivElement, TreeItemProps>(
                             ) : (
                                 <TreeLeaf
                                     item={item}
-                                    selectedItemId={selectedItemId}
+                                    selectedItemIds={selectedItemIds}
                                     handleSelectChange={handleSelectChange}
                                     defaultLeafIcon={defaultLeafIcon}
                                 />
@@ -168,20 +193,23 @@ const TreeNode = ({
     item,
     handleSelectChange,
     expandedItemIds,
-    selectedItemId,
+    selectedItemIds,
     defaultNodeIcon,
     defaultLeafIcon
 }: {
     item: TreeDataItem
     handleSelectChange: (item: TreeDataItem | undefined) => void
     expandedItemIds: string[]
-    selectedItemId?: string
+    selectedItemIds: string[] // Changed to array
     defaultNodeIcon?: any
     defaultLeafIcon?: any
 }) => {
     const [value, setValue] = React.useState(
         expandedItemIds.includes(item.id) ? [item.id] : []
     )
+    
+    const isSelected = selectedItemIds.includes(item.id)
+    
     return (
         <AccordionPrimitive.Root
             type="multiple"
@@ -192,7 +220,7 @@ const TreeNode = ({
                 <AccordionTrigger
                     className={cn(
                         treeVariants(),
-                        selectedItemId === item.id && selectedTreeVariants()
+                        isSelected && selectedTreeVariants()
                     )}
                     onClick={() => {
                         handleSelectChange(item)
@@ -201,19 +229,19 @@ const TreeNode = ({
                 >
                     <TreeIcon
                         item={item}
-                        isSelected={selectedItemId === item.id}
+                        isSelected={isSelected}
                         isOpen={value.includes(item.id)}
                         default={defaultNodeIcon}
                     />
                     <span className="text-sm truncate">{item.name}</span>
-                    <TreeActions isSelected={selectedItemId === item.id} isFile={false}>
+                    <TreeActions isSelected={isSelected}>
                         {item.actions}
                     </TreeActions>
                 </AccordionTrigger>
                 <AccordionContent className="ml-4 pl-1 border-l">
                     <TreeItem
                         data={item.children ? item.children : item}
-                        selectedItemId={selectedItemId}
+                        selectedItemIds={selectedItemIds}
                         handleSelectChange={handleSelectChange}
                         expandedItemIds={expandedItemIds}
                         defaultLeafIcon={defaultLeafIcon}
@@ -229,7 +257,7 @@ const TreeLeaf = React.forwardRef<
     HTMLDivElement,
     React.HTMLAttributes<HTMLDivElement> & {
         item: TreeDataItem
-        selectedItemId?: string
+        selectedItemIds: string[] // Changed to array
         handleSelectChange: (item: TreeDataItem | undefined) => void
         defaultLeafIcon?: any
     }
@@ -238,13 +266,15 @@ const TreeLeaf = React.forwardRef<
         {
             className,
             item,
-            selectedItemId,
+            selectedItemIds,
             handleSelectChange,
             defaultLeafIcon,
             ...props
         },
         ref
     ) => {
+        const isSelected = selectedItemIds.includes(item.id)
+        
         return (
             <div
                 ref={ref}
@@ -252,7 +282,7 @@ const TreeLeaf = React.forwardRef<
                     'ml-5 flex text-left items-center py-2 cursor-pointer before:right-1',
                     treeVariants(),
                     className,
-                    selectedItemId === item.id && selectedTreeVariants()
+                    isSelected && selectedFileVariants() // Use the new variant for files
                 )}
                 onClick={() => {
                     handleSelectChange(item)
@@ -262,11 +292,20 @@ const TreeLeaf = React.forwardRef<
             >
                 <TreeIcon
                     item={item}
-                    isSelected={selectedItemId === item.id}
+                    isSelected={isSelected}
                     default={defaultLeafIcon}
                 />
                 <span className="flex-grow text-sm truncate">{item.name}</span>
-                <TreeActions isSelected={selectedItemId === item.id} isFile={true}>
+                <TreeActions isSelected={isSelected}>
+                    <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/20"
+                        onChange={(e) => {
+                            e.stopPropagation();
+                            handleSelectChange(item);
+                        }}
+                    />
                     {item.actions}
                 </TreeActions>
             </div>
@@ -341,11 +380,9 @@ const TreeIcon = ({
 const TreeActions = ({
     children,
     isSelected,
-    isFile = false // Add this new prop with default value
 }: {
     children: React.ReactNode
     isSelected: boolean
-    isFile?: boolean // Make it optional with TypeScript
 }) => {
     return (
         <div
@@ -354,14 +391,6 @@ const TreeActions = ({
                 'absolute right-3 group-hover:block flex items-center gap-2'
             )}
         >
-            {isFile && (
-                <input 
-                    type="checkbox" 
-                    checked={isSelected}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/20"
-                    onChange={(e) => e.stopPropagation()} // Prevent triggering parent click events
-                />
-            )}
             {children}
         </div>
     )

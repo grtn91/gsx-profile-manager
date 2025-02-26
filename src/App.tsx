@@ -1,7 +1,4 @@
-import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import FolderView from "./components/Folders";
-import { TableDemo } from "./components/TableDemo";
+import { FolderView } from "./components/FolderView";
 import "./css/App.css";
 import { Button } from "./components/ui/button";
 import { Settings, User } from "lucide-react";
@@ -24,14 +21,8 @@ function App() {
           </Button>
         </div>
       </header>
-      <div className="grid grid-cols-1">
-      <div className="">
-        <TableDemo />
-      </div>
-      <div className="flex gap-4 mt-3">
-        <Button variant="default">Activate Profiles</Button>
-        <Button variant="destructive">Clear Profiles</Button>
-      </div>
+      <div className="container">
+        <FolderView />
       </div>
     </main>
   );
