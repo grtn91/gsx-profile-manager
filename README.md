@@ -49,12 +49,14 @@ Sceneries/
 │   │   ├── eddl-dus-intl/
 │   │   │   ├── GSX Profile/   ← Contains GSX profile files (`*.ini`, `*.py`)
 │   │   ├── eddf-frankfurt/
-│   │   │   ├── GSX Profile/
+│   │   │   ├── GSX Profile/   ← Contains GSX profile files (`*.ini`, `*.py`)
 │   ├── France/
 │   │   ├── lfpg-charles-de-gaulle/
-│   │   │   ├── GSX Profile/
-│── marketplace-dev-eddl/
-│   ├── GSX Profile/
+│   │   │   ├── GSX Profile/   ← Contains GSX profile files (`*.ini`, `*.py`)
+│── Asia/
+│   ├── China/
+│   │   ├── marketplace-dev-zbad-frankfurt/
+│   │   │   ├── GSX Profile/   ← Contains GSX profile files (`*.ini`, `*.py`)
 ```
 This ensures that GSX Profile Manager can detect and manage your profiles properly!
 
