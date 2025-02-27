@@ -9,6 +9,8 @@
 - **IMPORTANT:** Activating a profile currently **flushes the entire GSX Virtuali folder**, instead of adding symlinks to existing files.  
 - Use with caution and **back up your GSX profiles** before testing.  
 
+![alt text](https://github.com/grtn91/gsx-profile-manager/blob/master/public/Screenshot.png "Screenshot")
+
 ## 🔍 Key Features  
 
 - ✅ **Smart Profile Detection** – Simply add a folder to watch, and the app will automatically search for subfolders named **"GSX Profile"**, displaying all relevant files (`*.ini` & `*.py`).  
@@ -73,4 +75,8 @@ I'm actively working on improving GSX Profile Manager with the following enhance
   2. **Community Folder Scan** – Automatically detect GSX profiles inside the MSFS Community folder.  
   3. **Drag & Drop** – Users can drag & drop profiles into the app to store them for quick selection.  
 
-Stay tuned for these improvements in upcoming releases! 🚀  
+Stay tuned for these improvements in upcoming releases! 🚀 
+
+GSX Profile Manager is a tool I’ve developed to help simplify managing and activating GSX profiles in flight simulators. Future updates will improve symlink handling, add session persistence, and support Community folder scanning and drag & drop.
+
+💖 [Support](https://www.paypal.com/donate/?hosted_button_id=TSPHNJJ58GEGN) the project: As a solo developer, any donations help me continue improving and updating this tool. Thank you for your support!
