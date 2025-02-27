@@ -39,12 +39,14 @@ export function FolderView() {
     setData([]);
     setSelectedFiles([]);
     setCurrentFolderPath("");
+    setExpandedIds([]);
     
     // Clear persistent state in the store
     try {
       await invoke("save_app_state", {
-        currentFolder: null,  // Pass null to explicitly remove the folder
-        selectedFiles: []     // Pass empty array to clear selections
+        currentFolder: null,
+        selectedFiles: [],
+        expandedIds: []
       });
       console.log("Store data cleared successfully");
     } catch (error) {

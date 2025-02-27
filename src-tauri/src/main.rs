@@ -8,6 +8,8 @@ use std::os::windows::fs as windows_fs;
 use std::env;
 use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_store::{StoreExt, Builder};
+use serde_json::json;
 
 
 // Helper function to check if a directory contains a "GSX Profile" folder
@@ -243,10 +245,74 @@ async fn select_folder(app: AppHandle) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+async fn save_app_state(app: AppHandle, current_folder: Option<String>, selected_files: Vec<String>, expanded_ids: Vec<String>) -> Result<(), String> {
+    let store = app
+        .store("app-settings.json")
+        .map_err(|e| format!("Failed to get store: {}", e))?;
+
+    if let Some(folder) = current_folder {
+        store.set("current_folder".to_string(), json!(folder));
+    } else {
+        // Remove the entry completely if null is passed
+        store.delete("current_folder".to_string());
+    }
+
+    store.set("selected_files".to_string(), json!(selected_files));
+    
+    store.set("expanded_ids".to_string(), json!(expanded_ids));
+
+    store.save()
+        .map_err(|e| format!("Failed to persist settings: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn load_app_state(app: AppHandle) -> Result<(Option<String>, Vec<String>, Vec<String>), String> {
+    let store = app
+        .store("app-settings.json")
+        .map_err(|e| format!("Failed to get store: {}", e))?;
+    
+    let current_folder = match store.get("current_folder") {
+        Some(value) => {
+            serde_json::from_value::<String>(value.clone())
+                .map(Some)
+                .map_err(|e| format!("Failed to parse current folder: {}", e))?
+        },
+        None => None
+    };
+    
+    let selected_files = match store.get("selected_files") {
+        Some(value) => {
+            serde_json::from_value::<Vec<String>>(value.clone())
+                .map_err(|e| format!("Failed to parse selected files: {}", e))?
+        },
+        None => Vec::new()
+    };
+    
+    let expanded_ids = match store.get("expanded_ids") {
+        Some(value) => {
+            serde_json::from_value::<Vec<String>>(value.clone())
+                .map_err(|e| format!("Failed to parse expanded ids: {}", e))?
+        },
+        None => Vec::new()
+    };
+    
+    Ok((current_folder, selected_files, expanded_ids))
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![read_folder_contents, select_folder, activate_profiles])
+        .plugin(tauri_plugin_store::Builder::default().build())
+        .invoke_handler(tauri::generate_handler![
+            read_folder_contents, 
+            select_folder, 
+            activate_profiles,
+            save_app_state,
+            load_app_state
+            ])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");
 }
