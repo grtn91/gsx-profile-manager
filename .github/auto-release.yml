@@ -1,0 +1,65 @@
+name: "Publish Windows Release"
+
+on:
+  push:
+    branches:
+      - release
+
+# This workflow builds GSX Profile Manager for Windows only
+
+jobs:
+  publish-tauri:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: latest
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: "GSX Profile Manager v__VERSION__"
+          releaseBody: |
+            ## GSX Profile Manager v__VERSION__
+            
+            ### Installation
+            - Download the Windows installer
+            - Run the installer and follow the instructions
+            - Once installed, open GSX Profile Manager from your Start menu
+            
+            ### Changes in this version
+            - See commit history for details
+          releaseDraft: true
+          prerelease: true
