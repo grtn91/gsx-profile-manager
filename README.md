@@ -1,10 +1,12 @@
-## GSX Profile Manager by grtn
+# 🚀 GSX Profile Manager – Streamline Your Ground Handling Profiles!  
 
-- First working 0.0.1-alpha version
-- Can open a folder and scann for GSX-Profile Folders in there
-    - I structure/sync my profiles with MSFS Addon Linker
-        - In there I have the Folder Structure
-        - Scenery -> Airports -> grtn-eddf-example
-        - In this Folder i place a Folder GSX Profile
-        - In their place you GSX Files (or multiple ones (GSX vs Aerosoft), just need to be named differently)
-- Now you can select your profiles and create a symlink to your GSX Profile Folder
+**GSX Profile Manager** is a powerful tool designed for flight simulator enthusiasts who use **GSX** for ground handling. Managing and activating your GSX profiles has never been easier!  
+
+## 🔍 Key Features  
+
+- ✅ **Smart Profile Detection** – Simply add a folder to watch, and the app will automatically search for subfolders named **"GSX Profile"**, displaying all relevant files (`*.ini` & `*.py`).  
+- ✅ **Easy File Selection** – Browse, select, and highlight profile files effortlessly.  
+- ✅ **One-Click Activation** – Instantly activate your preferred GSX profile by creating a symlink to the Virtuali GSX Profile folder.  
+- ✅ **Intuitive Folder Navigation** – Expand, collapse, and organize your profiles with ease.  
+
+Take control of your GSX profiles and optimize your ground handling experience today! ✈️  
