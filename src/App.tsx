@@ -28,7 +28,7 @@ function App() {
           GSX Profile Manager
         </h1>
         <nav>
-          <Badge className="mr-2.5" variant="secondary">v.0.0.1-alpha.3</Badge>
+          <Badge className="mr-2.5" variant="secondary">v.0.0.2</Badge>
           <a href="https://www.paypal.com/donate/?hosted_button_id=TSPHNJJ58GEGN" target="_blank" className={cn(
           badgeVariants({ variant: "default" }),
           "mr-2.5")}>Support me</a>
