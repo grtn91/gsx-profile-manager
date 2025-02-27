@@ -1,16 +1,17 @@
+import { invoke } from '@tauri-apps/api/core';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { TreeDataItem } from '@/components/ui/tree-view';
-import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface AppContextType {
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
-  currentFolderPath: string,
+  currentFolderPath: string;
   setCurrentFolderPath: (path: string) => void;
-  selectedFiles: string[],
+  selectedFiles: string[];
   setSelectedFiles: (path: string[]) => void;
-  data: TreeDataItem[],
+  data: TreeDataItem[];
   setData: (folderContents: TreeDataItem[]) => void;
-  expandedIds: string[],
+  expandedIds: string[];
   setExpandedIds: (ids: string[]) => void;
 }
 
@@ -21,8 +22,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentFolderPath, setCurrentFolderPath] = useState<string>("");
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [data, setData] = useState<TreeDataItem[]>([]);
-  // Add state for expanded nodes
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
+  
+  // Load saved state when app starts
+  useEffect(() => {
+    async function loadSavedState() {
+      try {
+        setIsLoading(true);
+        const [savedFolder, savedFiles, savedExpanded] = await invoke<[string | null, string[], string[]]>("load_app_state");
+        
+        if (savedFolder) {
+          setCurrentFolderPath(savedFolder);
+          const folderContents = await invoke<TreeDataItem[]>("read_folder_contents", { folderPath: savedFolder });
+          setData(folderContents);
+          
+          if (savedExpanded && savedExpanded.length > 0) {
+            setExpandedIds(savedExpanded);
+          }
+          
+          if (savedFiles && savedFiles.length > 0) {
+            setSelectedFiles(savedFiles);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading saved state:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadSavedState();
+  }, []);
+  
+  // Save state whenever it changes
+  useEffect(() => {
+    async function saveState() {
+      // Don't save if we have nothing meaningful to save
+      if (!currentFolderPath && selectedFiles.length === 0 && expandedIds.length === 0) return;
+      
+      try {
+        await invoke("save_app_state", {
+          currentFolder: currentFolderPath || null,
+          selectedFiles,
+          expandedIds
+        });
+      } catch (error) {
+        console.error("Error saving state:", error);
+      }
+    }
+    
+    // Debounce the save to prevent too many calls
+    const timeoutId = setTimeout(saveState, 500);
+    return () => clearTimeout(timeoutId);
+  }, [currentFolderPath, selectedFiles, expandedIds]);
 
   return (
     <AppContext.Provider value={{ 
