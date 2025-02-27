@@ -9,7 +9,8 @@
 - **IMPORTANT:** Activating a profile currently **flushes the entire GSX Virtuali folder**, instead of adding symlinks to existing files.  
 - Use with caution and **back up your GSX profiles** before testing.  
 
-![alt text](https://github.com/grtn91/gsx-profile-manager/blob/master/public/Screenshot.png "Screenshot")
+![alt text](https://github.com/grtn91/gsx-profile-manager/blob/master/public/Screenshot.png "Screenshot of App")
+
 
 ## 🔍 Key Features  
 
