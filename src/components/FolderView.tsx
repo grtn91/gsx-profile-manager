@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { TreeView, TreeDataItem } from './ui/tree-view';
 import { Button } from "./ui/button";
 import { useAppContext } from "@/context/AppContext";
-import { FileUser, Folder, FolderOpen, FolderOpenDot, FolderMinus, RefreshCw, X, ChevronRight, ChevronDown, FolderDot } from "lucide-react";
+import { FileUser, Folder, FolderOpen, FolderOpenDot, FolderMinus, RefreshCw, X } from "lucide-react";
 
 export function FolderView() {
   const {
@@ -21,6 +21,7 @@ export function FolderView() {
 
   const handleWatchFolder = async () => {
     try {
+      setIsLoading(true);
       const folderPath = await invoke<string>("select_folder");
       setCurrentFolderPath(folderPath);
       const folderContents = await invoke<TreeDataItem[]>("read_folder_contents", { folderPath });
@@ -28,6 +29,8 @@ export function FolderView() {
       setSelectedFiles([]);
     } catch (error) {
       console.error("Error reading folder contents:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -163,20 +166,18 @@ export function FolderView() {
     // Get paths to selected items
     const pathFolders = getPathsToSelectedItems(data, selectedFiles);
     
-    // Check if all paths to selected items are already expanded
-    const allPathsExpanded = pathFolders.every(id => expandedIds.includes(id));
+    // Expand all paths to selected items (no toggling)
+    // Keep existing expanded folders
+    const newExpandedIds = [...new Set([...expandedIds, ...pathFolders])];
+    setExpandedIds(newExpandedIds);
+  };
+  
+  // Helper to determine if the button should be disabled
+  const areAllSelectedPathsExpanded = () => {
+    if (selectedFiles.length === 0) return true; // Disable if nothing selected
     
-    if (allPathsExpanded) {
-      // If all paths are already expanded, collapse them
-      // We only collapse paths related to selected files, not all expanded folders
-      const remainingExpanded = expandedIds.filter(id => !pathFolders.includes(id));
-      setExpandedIds(remainingExpanded);
-    } else {
-      // If not all paths are expanded, expand all paths to selected items
-      // Keep existing expanded folders that aren't in the paths
-      const newExpandedIds = [...new Set([...expandedIds, ...pathFolders])];
-      setExpandedIds(newExpandedIds);
-    }
+    const pathFolders = getPathsToSelectedItems(data, selectedFiles);
+    return pathFolders.every(id => expandedIds.includes(id));
   };
 
   const handleCloseAll = () => {
@@ -186,7 +187,9 @@ export function FolderView() {
   return (
     <div className="space-y-4">
       {data.length === 0 ? (
-        <Button onClick={handleWatchFolder}>Watch Folder</Button>
+        <div className="container mx-auto h-[85vh] flex items-center justify-center">
+          <Button onClick={handleWatchFolder}>Watch Folder</Button>
+        </div>
       ) : (
         <div className="grid grid-cols-3 gap-4">
           {/* Left Column (1/3) - Tree View */}
@@ -217,10 +220,10 @@ export function FolderView() {
                     variant="ghost" 
                     className="h-7 w-7"
                     onClick={handleExpandToSelected}
-                    disabled={isLoading || selectedFiles.length === 0}
+                    disabled={isLoading || areAllSelectedPathsExpanded()}
                     title="Expand to Selected Items"
                   >
-                    <FolderDot className="h-3.5 w-3.5" />
+                    <FolderOpenDot className="h-3.5 w-3.5" />
                   </Button>
                   <Button 
                     size="icon"
@@ -262,7 +265,7 @@ export function FolderView() {
               selectedItemIds={selectedFiles}
               defaultLeafIcon={FileUser}
               expandedIds={expandedIds} /* Pass the expanded IDs */
-              onExpandedChange={setExpandedIds} /* Handle expansion changes */
+              onExpandedIdsChange={setExpandedIds} /* Handle expansion changes */
             />
             
             <div className="flex gap-4 mt-4">
