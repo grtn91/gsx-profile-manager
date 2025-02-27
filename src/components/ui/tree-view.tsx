@@ -35,7 +35,9 @@ type TreeProps = React.HTMLAttributes<HTMLDivElement> & {
     expandAll?: boolean
     defaultNodeIcon?: any
     defaultLeafIcon?: any
-    selectedItemIds?: string[] // New prop to accept external control
+    selectedItemIds?: string[] // External control for selected items
+    expandedIds?: string[] // External control for expanded items
+    onExpandedIdsChange?: (ids: string[]) => void // Callback when expanded items change
 }
 
 const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
@@ -48,7 +50,9 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
             defaultLeafIcon,
             defaultNodeIcon,
             className,
-            selectedItemIds: externalSelectedItemIds, // New prop
+            selectedItemIds: externalSelectedItemIds, // External selected items
+            expandedIds: externalExpandedIds, // External expanded items
+            onExpandedIdsChange, // Callback for expanded items
             ...props
         },
         ref
@@ -56,10 +60,14 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
         const [internalSelectedItemIds, setInternalSelectedItemIds] = React.useState<string[]>(
             initialSelectedItemIds
         )
+
+        // Internal expanded items state
+        const [internalExpandedIds, setInternalExpandedIds] = React.useState<string[]>([])
         
         // Use external IDs if provided, otherwise use internal state
         const selectedItemIds = externalSelectedItemIds || internalSelectedItemIds
 
+        // Handle selection change
         const handleSelectChange = React.useCallback(
             (item: TreeDataItem | undefined) => {
                 if (!item) return
@@ -85,35 +93,64 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
             [onSelectChange, externalSelectedItemIds]
         )
 
-        const expandedItemIds = React.useMemo(() => {
-            if (initialSelectedItemIds.length === 0) {
-                return [] as string[]
-            }
-
-            const ids: string[] = []
-
-            function walkTreeItems(
-                items: TreeDataItem[] | TreeDataItem,
-                targetIds: string[]
-            ) {
-                if (items instanceof Array) {
-                    for (let i = 0; i < items.length; i++) {
-                        ids.push(items[i]!.id)
-                        if (walkTreeItems(items[i]!, targetIds) && !expandAll) {
-                            return true
-                        }
-                        if (!expandAll) ids.pop()
+        // Handle expansion change
+        const handleExpandedChange = React.useCallback((itemId: string, isExpanded: boolean) => {
+            const updateExpanded = (prev: string[]) => {
+                if (isExpanded) {
+                    if (!prev.includes(itemId)) {
+                        return [...prev, itemId];
                     }
-                } else if (!expandAll && targetIds.includes(items.id)) {
-                    return true
-                } else if (items.children) {
-                    return walkTreeItems(items.children, targetIds)
+                } else {
+                    return prev.filter(id => id !== itemId);
                 }
+                return prev;
+            };
+
+            // Update internal state if no external control
+            if (!externalExpandedIds) {
+                setInternalExpandedIds(prev => updateExpanded(prev));
             }
 
-            walkTreeItems(data, initialSelectedItemIds)
-            return ids
-        }, [data, expandAll, initialSelectedItemIds])
+            // Call external handler if provided
+            if (onExpandedIdsChange) {
+                // Calculate the new expanded IDs
+                const newExpandedIds = updateExpanded(externalExpandedIds || internalExpandedIds);
+                onExpandedIdsChange(newExpandedIds);
+            }
+        }, [externalExpandedIds, internalExpandedIds, onExpandedIdsChange]);
+
+        // Calculate expanded item IDs if not externally controlled
+        const calculatedExpandedIds = React.useMemo(() => {
+            // If external control is provided, use it
+            if (externalExpandedIds) {
+                return externalExpandedIds;
+            }
+
+            // If expandAll is true, calculate all folder IDs
+            if (expandAll) {
+                const ids: string[] = [];
+                
+                const collectIds = (items: TreeDataItem[] | TreeDataItem) => {
+                    if (items instanceof Array) {
+                        for (const item of items) {
+                            if (item.children) {
+                                ids.push(item.id);
+                                collectIds(item.children);
+                            }
+                        }
+                    } else if (items.children) {
+                        ids.push(items.id);
+                        collectIds(items.children);
+                    }
+                };
+                
+                collectIds(data);
+                return ids;
+            }
+
+            // Otherwise use the internal state
+            return internalExpandedIds;
+        }, [data, expandAll, externalExpandedIds, internalExpandedIds]);
 
         return (
             <div className={cn('overflow-hidden relative p-2', className)}>
@@ -122,7 +159,8 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
                     ref={ref}
                     selectedItemIds={selectedItemIds}
                     handleSelectChange={handleSelectChange}
-                    expandedItemIds={expandedItemIds}
+                    expandedItemIds={calculatedExpandedIds}
+                    handleExpandedChange={handleExpandedChange}
                     defaultLeafIcon={defaultLeafIcon}
                     defaultNodeIcon={defaultNodeIcon}
                     {...props}
@@ -137,6 +175,7 @@ type TreeItemProps = TreeProps & {
     selectedItemIds: string[] // Changed to array
     handleSelectChange: (item: TreeDataItem | undefined) => void
     expandedItemIds: string[]
+    handleExpandedChange: (itemId: string, isExpanded: boolean) => void
     defaultNodeIcon?: any
     defaultLeafIcon?: any
 }
@@ -149,6 +188,7 @@ const TreeItem = React.forwardRef<HTMLDivElement, TreeItemProps>(
             selectedItemIds,
             handleSelectChange,
             expandedItemIds,
+            handleExpandedChange,
             defaultNodeIcon,
             defaultLeafIcon,
             ...props
@@ -169,6 +209,7 @@ const TreeItem = React.forwardRef<HTMLDivElement, TreeItemProps>(
                                     selectedItemIds={selectedItemIds}
                                     expandedItemIds={expandedItemIds}
                                     handleSelectChange={handleSelectChange}
+                                    handleExpandedChange={handleExpandedChange}
                                     defaultNodeIcon={defaultNodeIcon}
                                     defaultLeafIcon={defaultLeafIcon}
                                 />
@@ -193,6 +234,7 @@ const TreeNode = ({
     item,
     handleSelectChange,
     expandedItemIds,
+    handleExpandedChange,
     selectedItemIds,
     defaultNodeIcon,
     defaultLeafIcon
@@ -200,21 +242,33 @@ const TreeNode = ({
     item: TreeDataItem
     handleSelectChange: (item: TreeDataItem | undefined) => void
     expandedItemIds: string[]
+    handleExpandedChange: (itemId: string, isExpanded: boolean) => void
     selectedItemIds: string[] // Changed to array
     defaultNodeIcon?: any
     defaultLeafIcon?: any
 }) => {
-    const [value, setValue] = React.useState(
-        expandedItemIds.includes(item.id) ? [item.id] : []
-    )
+    // Use the expandedItemIds prop to determine if this node is expanded
+    const isExpanded = expandedItemIds.includes(item.id);
+    const [value, setValue] = React.useState<string[]>(
+        isExpanded ? [item.id] : []
+    );
+
+    // Update internal state when expandedItemIds changes
+    React.useEffect(() => {
+        setValue(isExpanded ? [item.id] : []);
+    }, [isExpanded, item.id]);
     
-    const isSelected = selectedItemIds.includes(item.id)
+    const isSelected = selectedItemIds.includes(item.id);
     
     return (
         <AccordionPrimitive.Root
             type="multiple"
             value={value}
-            onValueChange={(s) => setValue(s)}
+            onValueChange={(newValue) => {
+                setValue(newValue);
+                // Notify parent about expansion change
+                handleExpandedChange(item.id, newValue.includes(item.id));
+            }}
         >
             <AccordionPrimitive.Item value={item.id}>
                 <AccordionTrigger
@@ -222,9 +276,11 @@ const TreeNode = ({
                         treeVariants(),
                         isSelected && selectedTreeVariants()
                     )}
-                    onClick={() => {
-                        handleSelectChange(item)
-                        item.onClick?.()
+                    onClick={(e) => {
+                        // Prevent accordion from toggling when clicking the item text
+                        e.stopPropagation();
+                        handleSelectChange(item);
+                        item.onClick?.();
                     }}
                 >
                     <TreeIcon
@@ -244,6 +300,7 @@ const TreeNode = ({
                         selectedItemIds={selectedItemIds}
                         handleSelectChange={handleSelectChange}
                         expandedItemIds={expandedItemIds}
+                        handleExpandedChange={handleExpandedChange}
                         defaultLeafIcon={defaultLeafIcon}
                         defaultNodeIcon={defaultNodeIcon}
                     />
@@ -296,18 +353,6 @@ const TreeLeaf = React.forwardRef<
                     default={defaultLeafIcon}
                 />
                 <span className="flex-grow text-sm truncate">{item.name}</span>
-                <TreeActions isSelected={isSelected}>
-                    <input 
-                        type="checkbox" 
-                        checked={isSelected}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/20"
-                        onChange={(e) => {
-                            e.stopPropagation();
-                            handleSelectChange(item);
-                        }}
-                    />
-                    {item.actions}
-                </TreeActions>
             </div>
         )
     }
