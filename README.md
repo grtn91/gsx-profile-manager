@@ -2,7 +2,7 @@
 
 **GSX Profile Manager** is a powerful tool designed for flight simulator enthusiasts who use **GSX** for ground handling. Managing and activating your GSX profiles has never been easier!  
 
-![alt text](https://github.com/grtn91/gsx-profile-manager/blob/master/public/Screenshot.png) "Screenshot")
+![alt text](https://github.com/grtn91/gsx-profile-manager/blob/master/public/Screenshot.png "Screenshot")
 
 ## 🔍 Key Features  
 
