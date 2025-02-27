@@ -3,7 +3,7 @@ name: "Publish Windows Release"
 on:
   push:
     branches:
-      - release
+      - master
 
 # This workflow builds GSX Profile Manager for Windows only
 
