@@ -4,7 +4,6 @@ import { Button } from "./ui/button";
 import { useAppContext } from "@/context/AppContext";
 import { FileUser, Folder, FolderOpen, FolderOpenDot, FolderMinus, RefreshCw, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
 import { Check, X as XIcon } from "lucide-react";
 
 export function FolderView() {
