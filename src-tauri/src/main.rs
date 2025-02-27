@@ -6,7 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::os::windows::fs as windows_fs;
 use std::env;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 
 
@@ -127,7 +127,7 @@ fn read_folder_contents(folder_path: String) -> Result<Vec<TreeDataItem>, String
                             }
                         }
                     },
-                    Err(e) => {
+                    Err(_e) => {
                         // Skip entries we can't read
                         continue;
                     }
