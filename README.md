@@ -11,4 +11,6 @@
 - ✅ **One-Click Activation** – Instantly activate your preferred GSX profile by creating a symlink to the Virtuali GSX Profile folder.  
 - ✅ **Intuitive Folder Navigation** – Expand, collapse, and organize your profiles with ease.  
 
-Take control of your GSX profiles and optimize your ground handling experience today! ✈️  
+Take control of your GSX profiles and optimize your ground handling experience today! ✈️   
+
+If you like my work feel free to give a donation: [Paypal](https://www.paypal.com/donate/?hosted_button_id=TSPHNJJ58GEGN)
