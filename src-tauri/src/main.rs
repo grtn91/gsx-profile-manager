@@ -50,16 +50,34 @@ fn activate_profiles(selected_files: Vec<String>) -> Result<String, String> {
     fs::create_dir_all(&target_dir)
         .map_err(|e| format!("Failed to create target directory: {}", e))?;
     
-    // Clear existing files in the target directory
+    // Keep track of filenames that will be created
+    let mut new_filenames: Vec<String> = Vec::new();
+    
+    // First pass: collect filenames and check for conflicts
+    for file_path in &selected_files {
+        let source_path = PathBuf::from(file_path);
+        
+        if !source_path.exists() {
+            return Err(format!("Source file does not exist: {}", file_path));
+        }
+        
+        if let Some(filename) = source_path.file_name() {
+            new_filenames.push(filename.to_string_lossy().to_string());
+        }
+    }
+    
+    // Remove any existing files that would conflict with our new symlinks
     for entry in fs::read_dir(&target_dir).map_err(|e| format!("Failed to read target directory: {}", e))? {
         if let Ok(entry) = entry {
             let path = entry.path();
-            if path.is_file() {
-                fs::remove_file(&path)
-                    .map_err(|e| format!("Failed to remove file {}: {}", path.display(), e))?;
-            } else if path.is_symlink() {
-                fs::remove_file(&path)
-                    .map_err(|e| format!("Failed to remove symlink {}: {}", path.display(), e))?;
+            if let Some(filename) = path.file_name() {
+                let filename_str = filename.to_string_lossy().to_string();
+                if new_filenames.contains(&filename_str) {
+                    if path.is_file() || path.is_symlink() {
+                        fs::remove_file(&path)
+                            .map_err(|e| format!("Failed to remove file {}: {}", path.display(), e))?;
+                    }
+                }
             }
         }
     }
@@ -68,11 +86,6 @@ fn activate_profiles(selected_files: Vec<String>) -> Result<String, String> {
     let mut activated_count = 0;
     for file_path in selected_files {
         let source_path = PathBuf::from(&file_path);
-        
-        if !source_path.exists() {
-            return Err(format!("Source file does not exist: {}", file_path));
-        }
-        
         let file_name = source_path.file_name()
             .ok_or_else(|| "Invalid file path".to_string())?
             .to_string_lossy()
