@@ -18,7 +18,9 @@ function App() {
   return (
     <div>
     {isLoading ? (
-      <Spinner size="md"></Spinner>
+      <div className="container mx-auto h-dvh content-center">
+        <Spinner size="w-48 h-48"></Spinner>
+      </div>
       ) : (
       <main className="container mx-auto p-4">
       <header className="flex flex-row justify-between">

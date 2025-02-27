@@ -25,7 +25,7 @@ export function Spinner({
   const sizeClass = sizeMap[size as keyof typeof sizeMap] || size;
 
   return (
-    <div role="status" className={cn("flex items-center", className)} {...props}>
+    <div role="status" className={cn("flex justify-center gap-2", className)} {...props}>
       <svg
         aria-hidden="true"
         className={cn(
@@ -60,9 +60,9 @@ export function SpinnerWithText({
   ...props
 }: SpinnerProps & { showText?: boolean }) {
   return (
-    <div role="status" className={cn("flex items-center gap-2", className)} {...props}>
+    <div role="status" className={cn("flex justify-center gap-2", className)} {...props}>
       <Spinner size={size} text={text} fillColor={fillColor} />
-      {showText && <span className="text-sm text-muted-foreground">{text}</span>}
+      {showText && <span className="text-sm text-muted-foreground content-center">{text}</span>}
     </div>
   );
 }
