@@ -4,9 +4,7 @@
 
 ## ⚠️ Warning: Early Alpha Version  
 
-🚧 This is a **very early alpha version**, and there are known issues! 🚧  
-
-- **IMPORTANT:** Activating a profile currently **flushes the entire GSX Virtuali folder**, instead of adding symlinks to existing files.  
+🚧 This is a **very early alpha version**, and issues are expected! 🚧  
 - Use with caution and **back up your GSX profiles** before testing.  
 
 ![alt text](https://github.com/grtn91/gsx-profile-manager/blob/master/public/screenshot-new.png "Screenshot of App")
@@ -69,8 +67,8 @@ Take control of your GSX profiles and optimize your ground handling experience t
 
 I'm actively working on improving GSX Profile Manager with the following enhancements:  
 
-- 🛠️ **Fixing the Symlink Issue** – The current activation method flushes the GSX Virtuali folder. Future updates will ensure a safer approach that only adds the necessary symlinks.  
-- 💾 **Persistent User Sessions** – Right now, the app does not save your selections. In the next release, your selected files and settings will be saved, so you don’t have to reselect everything after restarting.  
+- 🛠️ **Fixing the Symlink Issue** – The current activation method flushes the GSX Virtuali folder. Future updates will ensure a safer approach that only adds the necessary symlinks. ✅ Fixed in v0.0.2 
+- 💾 **Persistent User Sessions** – Right now, the app does not save your selections. In the next release, your selected files and settings will be saved, so you don’t have to reselect everything after restarting. ✅ Fixed in v.0.0.2
 - 🔄 **Expanded Profile Management** – In a future release, I plan to introduce **three ways** to manage GSX profiles:  
   1. **Current method** – Scanning a specified folder for GSX profiles.  
   2. **Community Folder Scan** – Automatically detect GSX profiles inside the MSFS Community folder.  
