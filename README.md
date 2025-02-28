@@ -3,7 +3,6 @@
 GSX Profile Manager is now available in Version 1.0! This powerful tool makes managing and activating your GSX profiles easier than ever.
 
 ![Logo](https://github.com/grtn91/gsx-profile-manager/blob/master/public/gsxman.png)
-![Screenshot](https://github.com/grtn91/gsx-profile-manager/blob/master/public/screen-2.png)
 
 ## ⚠️ Version 1.0.1 – First Stable Release!
 
@@ -56,7 +55,7 @@ For each scenery, create a "GSX Profile" folder and place the profile files (*.i
 If a scenery was installed via an external installer or the MSFS Marketplace, manually create a folder with the airport’s name (e.g., marketplace-dev-eddl) and add a GSX Profile subfolder inside.
 
 ## 📂 Example Folder Structure
-
+```
 Sceneries/
 │── Europe/
 │   ├── Germany/
@@ -70,7 +69,11 @@ Sceneries/
 │── Asia/
 │   ├── China/
 │   │   ├── marketplace-dev-zbad/
-│   │   │   ├── GSX Profile/  
+│   │   │   ├── GSX Profile/
+```
+
+## Screnshot
+![Screenshot](https://github.com/grtn91/gsx-profile-manager/blob/master/public/screen-2.png)
 
 ## 🔧 Future Improvements
 
