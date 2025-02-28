@@ -1,6 +1,6 @@
 [package]
 name = "gsx-profile-manager"
-version = "0.0.3"
+version = "0.0.4"
 description = "A Manager to manage GSX Profiles"
 authors = ["grtn"]
 edition = "2021"
@@ -24,6 +24,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-dialog = "2"
 tauri-plugin-store = "2"
+chrono = "0.4"
 
 [[bin]]
 name = "gsx-profile-manager" 
