@@ -2,8 +2,8 @@
 
 GSX Profile Manager is now available in Version 1.0! This powerful tool makes managing and activating your GSX profiles easier than ever.
 
-![Logo]([http://url/to/img.png](https://github.com/grtn91/gsx-profile-manager/blob/master/public/gsxman.png))
-![Screenshot]([http://url/to/img.png](https://github.com/grtn91/gsx-profile-manager/blob/master/public/screen-2.png))
+![Logo](https://github.com/grtn91/gsx-profile-manager/blob/master/public/gsxman.png)
+![Screenshot](https://github.com/grtn91/gsx-profile-manager/blob/master/public/screen-2.png)
 
 ## ⚠️ Version 1.0.1 – First Stable Release!
 
