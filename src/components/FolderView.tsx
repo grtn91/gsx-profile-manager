@@ -2,9 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { TreeView, TreeDataItem } from './ui/tree-view';
 import { Button } from "./ui/button";
 import { useAppContext } from "@/context/AppContext";
-import { FileUser, Folder, FolderOpen, FolderOpenDot, FolderMinus, RefreshCw, X } from "lucide-react";
+import { FileUser, Folder, FolderOpen, FolderOpenDot, FolderMinus, RefreshCw, X, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X as XIcon } from "lucide-react";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
 
 export function FolderView() {
   const {
@@ -187,56 +188,100 @@ export function FolderView() {
                 </div>
                 <div className="flex space-x-1 flex-shrink-0">
                   {/* New expand buttons */}
-                  <Button 
-                    size="icon"
-                    variant="ghost" 
-                    className="h-7 w-7"
-                    onClick={handleExpandAll}
-                    disabled={isLoading}
-                    title="Expand All Folders"
-                  >
-                  <FolderOpen className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button 
-                    size="icon"
-                    variant="ghost" 
-                    className="h-7 w-7"
-                    onClick={handleExpandToSelected}
-                    disabled={isLoading || areAllSelectedPathsExpanded()}
-                    title="Expand to Selected Items"
-                  >
-                    <FolderOpenDot className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button 
-                    size="icon"
-                    variant="ghost" 
-                    className="h-7 w-7"
-                    onClick={handleCloseAll}
-                    title="Close all folders"
-                  >
-                    <FolderMinus className="h-3.5 w-3.5" />
-                  </Button>
-                  {/* Existing buttons */}
-                  <Button 
-                    size="icon"
-                    variant="ghost" 
-                    className="h-7 w-7"
-                    onClick={handleRefreshFolder}
-                    disabled={isLoading}
-                    title="Refresh"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button 
-                    size="icon"
-                    variant="ghost" 
-                    className="h-7 w-7"
-                    onClick={handleStopWatching}
-                    disabled={isLoading}
-                    title="Reset"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                      <Button 
+                        size="icon"
+                        variant="ghost" 
+                        className="h-7 w-7"
+                        onClick={handleExpandAll}
+                        disabled={isLoading}
+                      >
+                      <FolderOpen className="h-3.5 w-3.5" />
+                      </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Expand all folders</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Button 
+                          size="icon"
+                          variant="ghost" 
+                          className="h-7 w-7"
+                          onClick={handleExpandToSelected}
+                          disabled={isLoading || areAllSelectedPathsExpanded()}
+                        >
+                        <FolderOpenDot className="h-3.5 w-3.5" />
+                      </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Expand all folders with selected profiles</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                      <Button 
+                        size="icon"
+                        variant="ghost" 
+                        className="h-7 w-7"
+                        onClick={handleCloseAll}
+                      >
+                        <FolderMinus className="h-3.5 w-3.5" />
+                      </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Close all folders</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                          <Button 
+                        size="icon"
+                        variant="ghost" 
+                        className="h-7 w-7"
+                        onClick={handleRefreshFolder}
+                        disabled={isLoading}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Refresh watched folder</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Button 
+                          size="icon"
+                          variant="ghost" 
+                          className="h-7 w-7"
+                          onClick={handleStopWatching}
+                          disabled={isLoading}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Stop watching folder and select new folderr</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                
                 </div>
               </div>
             </div>
