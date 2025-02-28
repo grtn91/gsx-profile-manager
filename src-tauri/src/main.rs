@@ -108,7 +108,7 @@ async fn activate_profiles(app: AppHandle, selected_files: Vec<String>) -> Resul
         if backup_response {
             // User wants backup - create backup folder
             let datetime = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
-            let backup_dir = format!("{}\\AppData\\Roaming\\Virtuali\\GSX\\_backup_profiles_{}", user_profile, datetime);
+            let backup_dir = format!("{}\\AppData\\Roaming\\Virtuali\\GSX\\MSFS\\_backup_profiles_{}", user_profile, datetime);
             
             fs::create_dir_all(&backup_dir)
                 .map_err(|e| format!("Failed to create backup directory: {}", e))?;
@@ -136,22 +136,20 @@ async fn activate_profiles(app: AppHandle, selected_files: Vec<String>) -> Resul
     
     // Now proceed with file removal and symlink creation
     
-    // Remove any existing files that would conflict with our new symlinks
+    // Now proceed with symlink removal and creation
+        
+    // First, remove ALL existing symlinks in the target directory
     for entry in fs::read_dir(&target_dir).map_err(|e| format!("Failed to read target directory: {}", e))? {
         if let Ok(entry) = entry {
             let path = entry.path();
-            if let Some(filename) = path.file_name() {
-                let filename_str = filename.to_string_lossy().to_string();
-                if new_filenames.contains(&filename_str) {
-                    if path.is_file() || path.is_symlink() {
-                        fs::remove_file(&path)
-                            .map_err(|e| format!("Failed to remove file {}: {}", path.display(), e))?;
-                    }
-                }
+            if path.is_symlink() {
+                // Remove all symlinks regardless of their name
+                fs::remove_file(&path)
+                    .map_err(|e| format!("Failed to remove symlink {}: {}", path.display(), e))?;
             }
         }
     }
-    
+
     // Create symlinks for selected files
     let mut activated_count = 0;
     for file_path in selected_files {
