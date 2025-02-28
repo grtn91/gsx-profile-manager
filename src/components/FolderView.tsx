@@ -253,10 +253,10 @@ export function FolderView() {
           </div>
           
           {/* Right Column (2/3) - Selected Files Panel */}
-          <div className="border rounded col-span-2 p-2 min-h-[300px] flex flex-col">
+          <div className="border rounded col-span-2 p-2 flex flex-col self-start">
             <h3 className="font-medium mb-2">Selected Files: {selectedFiles.length}</h3>
             {selectedFiles.length > 0 ? (
-              <ul className="text-sm overflow-y-auto flex-grow">
+              <ul className="text-sm">
                 <AnimatePresence>
                   {(() => {
                     // Group files by parent folder (one level up from immediate parent)

@@ -43,7 +43,7 @@ function App() {
         <img src={logoSvg} alt="Logo" width={150} height={100} />
 
         <nav>
-          <Badge className="mr-2.5" variant="secondary">v1.0.0</Badge>
+          <Badge className="mr-2.5" variant="secondary">v1.0.1</Badge>
           <a href="https://www.paypal.com/donate/?hosted_button_id=TSPHNJJ58GEGN" target="_blank" className={cn(
           badgeVariants({ variant: "default" }),
           "mr-2.5")}>Support me</a>
