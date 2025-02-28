@@ -1437,7 +1437,7 @@ dependencies = [
 
 [[package]]
 name = "gsx-profile-manager"
-version = "0.0.4"
+version = "1.0.0"
 dependencies = [
  "chrono",
  "serde",

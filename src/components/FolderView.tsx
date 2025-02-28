@@ -70,28 +70,6 @@ export function FolderView() {
     }
   };
 
-  const handleActivateProfiles = async () => {
-    if (selectedFiles.length === 0) {
-      alert("Please select at least one profile to activate");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const result = await invoke<string>("activate_profiles", { 
-        selectedFiles 
-      });
-      
-      // Show success message
-      alert(result);
-    } catch (error) {
-      console.error("Error activating profiles:", error);
-      alert(`Failed to activate profiles: ${error}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Handle item selection in the tree view
   const handleSelectChange = (item: TreeDataItem | undefined) => {
     if (!item) return;
@@ -271,26 +249,7 @@ export function FolderView() {
               expandedIds={expandedIds} /* Pass the expanded IDs */
               onExpandedIdsChange={setExpandedIds} /* Handle expansion changes */
             />
-            
-            <div className="flex gap-4 mt-4">
-              <Button 
-                variant="default" 
-                onClick={handleActivateProfiles}
-                disabled={isLoading || selectedFiles.length === 0}
-                className="flex-1"
-              >
-                {isLoading ? "Activating..." : "Activate selected Profiles"}
-              </Button>
-              
-              <Button 
-                variant="outline"
-                onClick={() => setSelectedFiles([])}
-                disabled={isLoading || selectedFiles.length === 0}
-                hidden={isLoading}
-              >
-                Clear
-              </Button>
-            </div>
+
           </div>
           
           {/* Right Column (2/3) - Selected Files Panel */}
