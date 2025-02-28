@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { TreeView, TreeDataItem } from './ui/tree-view';
 import { Button } from "./ui/button";
 import { useAppContext } from "@/context/AppContext";
-import { FileUser, Folder, FolderOpen, FolderOpenDot, FolderMinus, RefreshCw, X, Settings } from "lucide-react";
+import { FileUser, Folder, FolderOpen, FolderOpenDot, FolderMinus, RefreshCw, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X as XIcon } from "lucide-react";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
