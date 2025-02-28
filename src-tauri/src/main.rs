@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::os::windows::fs as windows_fs;
 use std::env;
 use tauri::AppHandle;
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_store::{StoreExt, Builder};
 use serde_json::json;
 
@@ -40,7 +40,7 @@ fn contains_gsx_profile(dir_path: &PathBuf) -> bool {
 }
 
 #[tauri::command]
-fn activate_profiles(selected_files: Vec<String>) -> Result<String, String> {
+async fn activate_profiles(app: AppHandle, selected_files: Vec<String>) -> Result<String, String> {
     // Get current user's profile directory
     let user_profile = env::var("USERPROFILE")
         .map_err(|_| "Failed to get user profile directory".to_string())?;
@@ -53,7 +53,7 @@ fn activate_profiles(selected_files: Vec<String>) -> Result<String, String> {
     // Keep track of filenames that will be created
     let mut new_filenames: Vec<String> = Vec::new();
     
-    // First pass: collect filenames and check for conflicts
+    // Check if any files will be overwritten
     for file_path in &selected_files {
         let source_path = PathBuf::from(file_path);
         
@@ -65,6 +65,76 @@ fn activate_profiles(selected_files: Vec<String>) -> Result<String, String> {
             new_filenames.push(filename.to_string_lossy().to_string());
         }
     }
+    
+    // Check if target directory has any files
+    let has_existing_files = fs::read_dir(&target_dir)
+        .map_err(|e| format!("Failed to read target directory: {}", e))?
+        .filter_map(|entry| entry.ok())
+        .any(|entry| entry.path().is_file() || entry.path().is_symlink());
+    
+    // If there are existing files, show confirmation dialog
+    if has_existing_files {
+        let (tx, rx) = std::sync::mpsc::channel();
+        
+        // Ask user for confirmation
+        app.dialog()
+            .message("This will replace existing GSX profiles. Would you like to proceed?")
+            .title("Warning")
+            .kind(MessageDialogKind::Warning)
+            .buttons(MessageDialogButtons::OkCancel)
+            .show(move |index| {
+                let _ = tx.send(index);
+            });
+        
+            let response = rx.recv().map_err(|_| "Dialog interaction failed".to_string())?;
+            if !response { // For OkCancel, false means Cancel was clicked
+                // User clicked Cancel
+                return Ok("Operation cancelled by user.".to_string());
+            }
+        
+        // Ask if user wants to create backup
+        let (backup_tx, backup_rx) = std::sync::mpsc::channel();
+        
+        app.dialog()
+        .message("Would you like to create a backup of your current profiles?")
+        .title("Backup")
+        .buttons(MessageDialogButtons::YesNo)
+        .show(move |index| {
+            let _ = backup_tx.send(index);
+        });
+        
+        // Wait for user response on backup
+        let backup_response = backup_rx.recv().map_err(|_| "Dialog interaction failed".to_string())?;
+        if backup_response {
+            // User wants backup - create backup folder
+            let datetime = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
+            let backup_dir = format!("{}\\AppData\\Roaming\\Virtuali\\GSX\\_backup_profiles_{}", user_profile, datetime);
+            
+            fs::create_dir_all(&backup_dir)
+                .map_err(|e| format!("Failed to create backup directory: {}", e))?;
+            
+            // Copy all files from target directory to backup directory
+            for entry in fs::read_dir(&target_dir)
+                .map_err(|e| format!("Failed to read target directory: {}", e))? {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if path.is_file() || path.is_symlink() {
+                        let file_name = path.file_name()
+                            .ok_or_else(|| "Invalid file path".to_string())?;
+                        let backup_path = format!("{}\\{}", backup_dir, file_name.to_string_lossy());
+                        
+                        // For symlinks, copy the actual file content
+                        let file_content = fs::read(&path)
+                            .map_err(|e| format!("Failed to read file {}: {}", path.display(), e))?;
+                        fs::write(&backup_path, file_content)
+                            .map_err(|e| format!("Failed to write backup file {}: {}", backup_path, e))?;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Now proceed with file removal and symlink creation
     
     // Remove any existing files that would conflict with our new symlinks
     for entry in fs::read_dir(&target_dir).map_err(|e| format!("Failed to read target directory: {}", e))? {
