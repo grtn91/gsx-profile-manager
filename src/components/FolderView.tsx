@@ -5,6 +5,7 @@ import { useAppContext } from "@/context/AppContext";
 import { FileUser } from "lucide-react";
 import FolderToolbar from "./FolderToolbar";
 import SelectedFolders from "./SelectedFolders";
+import { Eye } from 'lucide-react';
 
 export function FolderView() {
   const {
@@ -54,7 +55,7 @@ export function FolderView() {
     <div className="space-y-4">
       {data.length === 0 ? (
         <div className="container mx-auto h-[85vh] flex items-center justify-center">
-          <Button onClick={handleWatchFolder}>Watch Folder</Button>
+          <Button onClick={handleWatchFolder}><Eye/>Watch Folder</Button>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-4">
