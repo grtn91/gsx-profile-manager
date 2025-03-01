@@ -13,6 +13,13 @@ dist-ssr
 *.local
 /src-tauri/target
 
+# Lock files
+package-lock.json
+pnpm-lock.yaml
+Cargo.lock
+*-lock.*
+*.lock
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
