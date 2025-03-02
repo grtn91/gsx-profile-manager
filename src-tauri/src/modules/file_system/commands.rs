@@ -34,18 +34,15 @@ pub fn read_folder_contents(folder_path: String) -> Result<Vec<TreeDataItem>, St
                         if path.is_dir() {
                             // Only process directories
                             let name = path.file_name().unwrap().to_string_lossy().to_string();
-                            let id = name.clone();
+                            let path_str = path.to_string_lossy().to_string();
+                            let is_directory = true; // This is always a directory here
                             
                             // Get child directories that contain GSX Profile folders
                             match read_relevant_folders(&path) {
                                 Ok(children_result) => {
                                     // Only include this directory if it contains GSX Profile or has valid children
                                     if !children_result.is_empty() || contains_gsx_profile(&path) {
-                                        items.push(TreeDataItem {
-                                            id,
-                                            name,
-                                            children: Some(children_result),
-                                        });
+                                        items.push(TreeDataItem::new(name, path_str, is_directory, Some(children_result)));
                                     }
                                 },
                                 Err(e) if e.contains("Access is denied") || e.contains("Permission denied") => {

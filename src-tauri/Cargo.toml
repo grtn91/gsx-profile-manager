@@ -25,8 +25,8 @@ serde_json = "1"
 tauri-plugin-dialog = "2"
 tauri-plugin-store = "2"
 chrono = "0.4"
+dirs = "6.0.0"
 
 [[bin]]
 name = "gsx-profile-manager" 
 path = "src/main.rs"
-windows_subsystem = "windows"

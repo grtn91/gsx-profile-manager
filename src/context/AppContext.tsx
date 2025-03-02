@@ -1,99 +1,239 @@
-import { invoke } from '@tauri-apps/api/core';
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { TreeDataItem } from '@/components/ui/tree-view';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import { invoke } from "@tauri-apps/api/core";
+import { TreeDataItem } from '@/types/treeTypes';
 
+// Define the context type
 interface AppContextType {
+  // Global selection state (shared across components)
+  globalSelectedFiles: string[];
+  setGlobalSelectedFiles: React.Dispatch<React.SetStateAction<string[]>>;
+
+  // Watched folders (external filesystem)
+  watchedFolderData: TreeDataItem[];
+  setwatchedFolderData: React.Dispatch<React.SetStateAction<TreeDataItem[]>>;
+  watchedFolderExpandedIds: string[];
+  setwatchedFolderExpandedIds: React.Dispatch<React.SetStateAction<string[]>>;
+  currentWatchedFolderPath: string | null;
+  setCurrentWatchedFolderPath: React.Dispatch<React.SetStateAction<string | null>>;
+  refreshWatchedFolders: () => Promise<void>;
+
+  // Local folders (internal app storage)
+  localFolderData: TreeDataItem[];
+  setLocalFolderData: React.Dispatch<React.SetStateAction<TreeDataItem[]>>;
+  localFolderExpandedIds: string[];
+  setlocalFolderExpandedIds: React.Dispatch<React.SetStateAction<string[]>>;
+  refreshLocalFolders: () => Promise<void>;
+
+  // Application state
   isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
-  currentFolderPath: string;
-  setCurrentFolderPath: (path: string) => void;
-  selectedFiles: string[];
-  setSelectedFiles: (path: string[]) => void;
-  data: TreeDataItem[];
-  setData: (folderContents: TreeDataItem[]) => void;
-  expandedIds: string[];
-  setExpandedIds: (ids: string[]) => void;
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Session management
+  saveAppState: () => Promise<void>;
 }
 
+// Create the context with a default value
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  // Flag to track if initial state has been loaded
+  const hasLoadedState = useRef(false);
+  // Global selection state
+  const [globalSelectedFiles, setGlobalSelectedFiles] = useState<string[]>([]);
+
+  // Watched folders state
+  const [watchedFolderData, setwatchedFolderData] = useState<TreeDataItem[]>([]);
+  const [watchedFolderExpandedIds, setwatchedFolderExpandedIds] = useState<string[]>([]);
+  const [currentWatchedFolderPath, setCurrentWatchedFolderPath] = useState<string | null>(null);
+
+  // Local folders state (internal app storage)
+  const [localFolderData, setLocalFolderData] = useState<TreeDataItem[]>([]);
+  const [localFolderExpandedIds, setlocalFolderExpandedIds] = useState<string[]>([]);
+
+  // Application state
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [currentFolderPath, setCurrentFolderPath] = useState<string>("");
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [data, setData] = useState<TreeDataItem[]>([]);
-  const [expandedIds, setExpandedIds] = useState<string[]>([]);
-  
-  // Load saved state when app starts
+
+  const saveAppState = async () => {
+    // Don't save state until initial load is complete
+    if (!hasLoadedState.current) {
+      console.log("Skipping save - initial state not yet loaded");
+      return;
+    }
+
+    try {
+      /* console.log("Saving app state:", {
+        currentFolder: currentWatchedFolderPath,
+        selectedFiles: globalSelectedFiles.length,
+        expandedIds: watchedFolderExpandedIds.length,
+        localExpandedIds: localFolderExpandedIds.length
+      }); */
+
+      await invoke("save_app_state", {
+        currentFolder: currentWatchedFolderPath,
+        selectedFiles: globalSelectedFiles,
+        expandedIds: watchedFolderExpandedIds,
+        localExpandedIds: localFolderExpandedIds
+      });
+    } catch (error) {
+      console.error("Failed to save app state:", error);
+    }
+  };
+
+  // Function to refresh local folders (internal app storage)
+  const refreshLocalFolders = async () => {
+    try {
+      setIsLoading(true);
+      // Call the Tauri command to refresh local folders
+      const folderContents = await invoke<TreeDataItem[]>("refresh_local_folders");
+      setLocalFolderData(folderContents);
+    } catch (error) {
+      console.error("Error refreshing local folders:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add this function after refreshLocalFolders and before useEffect blocks
+  // Function to refresh watched folders
+  const refreshWatchedFolders = async () => {
+    if (!currentWatchedFolderPath) {
+      console.log("No folder path to refresh");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      console.log("Refreshing watched folder:", currentWatchedFolderPath);
+
+      const folderContents = await invoke<TreeDataItem[]>("read_folder_contents", {
+        folderPath: currentWatchedFolderPath
+      });
+
+      setwatchedFolderData(folderContents);
+      console.log("Watched folder refreshed, found", folderContents.length, "items");
+    } catch (error) {
+      console.error("Error refreshing watched folder:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Save state whenever critical parts change - with debounce
   useEffect(() => {
-    async function loadSavedState() {
+    // Don't save on initial render or before initial load
+    if (!hasLoadedState.current) return;
+
+    /*     console.log("State changed, scheduling save...", {
+          currentFolder: currentWatchedFolderPath,
+          selectedFilesCount: globalSelectedFiles.length
+        }); */
+
+    const timeoutId = setTimeout(() => {
+      saveAppState();
+    }, 500); // Debounce for 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [currentWatchedFolderPath, globalSelectedFiles, watchedFolderExpandedIds, localFolderExpandedIds]);
+
+  // Load app state on initial mount
+  useEffect(() => {
+    const loadInitialState = async () => {
       try {
         setIsLoading(true);
-        const [savedFolder, savedFiles, savedExpanded] = await invoke<[string | null, string[], string[]]>("load_app_state");
-        
-        if (savedFolder) {
-          setCurrentFolderPath(savedFolder);
-          const folderContents = await invoke<TreeDataItem[]>("read_folder_contents", { folderPath: savedFolder });
-          setData(folderContents);
-          
-          if (savedExpanded && savedExpanded.length > 0) {
-            setExpandedIds(savedExpanded);
-          }
-          
-          if (savedFiles && savedFiles.length > 0) {
-            setSelectedFiles(savedFiles);
+
+        // Load saved app state
+        const appState = await invoke<{
+          currentFolder: string | null;
+          selectedFiles: string[];
+          expandedIds: string[];
+          localExpandedIds: string[];
+        }>("load_app_state");
+
+        // Apply the loaded state if it exists
+        if (appState.currentFolder) {
+          setCurrentWatchedFolderPath(appState.currentFolder);
+
+          try {
+            // Load folder contents
+            const folderContents = await invoke<TreeDataItem[]>(
+              "read_folder_contents",
+              { folderPath: appState.currentFolder }
+            );
+            setwatchedFolderData(folderContents);
+          } catch (error) {
+            console.error("Error loading watched folder contents:", error);
           }
         }
+
+        if (appState.selectedFiles && appState.selectedFiles.length > 0) {
+          setGlobalSelectedFiles(appState.selectedFiles);
+        }
+
+        if (appState.expandedIds && appState.expandedIds.length > 0) {
+          setwatchedFolderExpandedIds(appState.expandedIds);
+        }
+
+        if (appState.localExpandedIds && appState.localExpandedIds.length > 0) {
+          setlocalFolderExpandedIds(appState.localExpandedIds);
+        }
+
+        // Mark that we've loaded initial state - IMPORTANT!
+        hasLoadedState.current = true;
+
+        // Load local folders regardless of saved state
+        await refreshLocalFolders();
       } catch (error) {
-        console.error("Error loading saved state:", error);
+        console.error("Failed to load initial app state:", error);
+        // Still try to load local folders even if loading saved state fails
+        await refreshLocalFolders();
+        // Still mark as loaded so we can save later
+        hasLoadedState.current = true;
       } finally {
         setIsLoading(false);
       }
-    }
+    };
 
-    loadSavedState();
+    loadInitialState();
   }, []);
-  
-  // Save state whenever it changes
-  useEffect(() => {
-    async function saveState() {
-      // Don't save if we have nothing meaningful to save
-      if (!currentFolderPath && selectedFiles.length === 0 && expandedIds.length === 0) return;
-      
-      try {
-        await invoke("save_app_state", {
-          currentFolder: currentFolderPath || null,
-          selectedFiles,
-          expandedIds
-        });
-      } catch (error) {
-        console.error("Error saving state:", error);
-      }
-    }
-    
-    // Debounce the save to prevent too many calls
-    const timeoutId = setTimeout(saveState, 500);
-    return () => clearTimeout(timeoutId);
-  }, [currentFolderPath, selectedFiles, expandedIds]);
+
+  // Create the context value object
+  const contextValue: AppContextType = {
+    // Global selection
+    globalSelectedFiles,
+    setGlobalSelectedFiles,
+
+    // Watched folders
+    watchedFolderData,
+    setwatchedFolderData,
+    watchedFolderExpandedIds,
+    setwatchedFolderExpandedIds,
+    currentWatchedFolderPath,
+    setCurrentWatchedFolderPath,
+    refreshWatchedFolders,
+
+    // Local folders
+    localFolderData,
+    setLocalFolderData,
+    localFolderExpandedIds,
+    setlocalFolderExpandedIds,
+    refreshLocalFolders,
+
+    // Application state
+    isLoading,
+    setIsLoading,
+
+    // Session management
+    saveAppState
+  };
 
   return (
-    <AppContext.Provider value={{ 
-      isLoading, 
-      setIsLoading, 
-      currentFolderPath,
-      setCurrentFolderPath,
-      selectedFiles,
-      setSelectedFiles,
-      data,
-      setData,
-      expandedIds,
-      setExpandedIds,
-    }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
 }
 
+// Custom hook to use the AppContext
 export function useAppContext() {
   const context = useContext(AppContext);
   if (context === undefined) {

@@ -39,27 +39,20 @@ pub fn read_relevant_folders(dir_path: &PathBuf) -> Result<Vec<TreeDataItem>, St
         
         if path.is_dir() {
             let name = path.file_name().unwrap().to_string_lossy().to_string();
-            let id = name.clone();
+            let path_str = path.to_string_lossy().to_string();
+            let is_directory = true; // This is always a directory in this context
             
             if name == "GSX Profile" {
                 // Found a GSX Profile folder, read and include its contents
                 let gsx_files = read_gsx_profile_contents(&path)?;
-                items.push(TreeDataItem {
-                    id,
-                    name,
-                    children: Some(gsx_files), // Add the files inside GSX Profile folder
-                });
+                items.push(TreeDataItem::new(name, path_str, is_directory, Some(gsx_files)));
             } else {
                 // Check if this directory contains GSX Profile folders
                 let children_result = read_relevant_folders(&path)?;
                 
                 if !children_result.is_empty() {
                     // Only add directories that contain GSX Profile folders
-                    items.push(TreeDataItem {
-                        id,
-                        name,
-                        children: Some(children_result),
-                    });
+                    items.push(TreeDataItem::new(name, path_str, is_directory, Some(children_result)));
                 }
             }
         }
@@ -75,29 +68,24 @@ pub fn read_gsx_profile_contents(dir_path: &PathBuf) -> Result<Vec<TreeDataItem>
     for entry in fs::read_dir(dir_path).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
+        let path_str = path.to_string_lossy().to_string();
         
         if path.is_file() {
             // Include the file in the tree
             let name = path.file_name().unwrap().to_string_lossy().to_string();
-            let id = format!("{}/{}", dir_path.to_string_lossy(), name); // Use full path as ID for uniqueness
             
-            items.push(TreeDataItem {
-                id,
-                name,
-                children: None, // Files don't have children
-            });
+            items.push(TreeDataItem::new(name, path_str, false, None));
+
         } else if path.is_dir() {
             // If there are subdirectories in GSX Profile, recursively include them
             let name = path.file_name().unwrap().to_string_lossy().to_string();
-            let id = format!("{}/{}", dir_path.to_string_lossy(), name);
+            let _id = format!("{}/{}", dir_path.to_string_lossy(), name);
             let children = read_gsx_profile_contents(&path)?;
             
             if !children.is_empty() {
-                items.push(TreeDataItem {
-                    id,
-                    name,
-                    children: Some(children),
-                });
+
+                items.push(TreeDataItem::new(name, path_str, true, Some(children)));
+
             }
         }
     }

@@ -1,31 +1,30 @@
 import { invoke } from "@tauri-apps/api/core";
-import { TreeDataItem } from './ui/tree-view';
-import { Button } from "./ui/button";
 import { useAppContext } from "@/context/AppContext";
-import { Folder, FolderOpen, FolderOpenDot, FolderMinus, RefreshCw, X } from "lucide-react";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
+import { Folder, FolderOpen, FolderOpenDot, FolderMinus, FolderSync, X } from "lucide-react";
+import { toggleExpandAll, expandToSelected, areAllSelectedPathsExpanded } from "@/components/utils/treeViewUtils";
+import { ButtonWithTooltip } from "./ui/button-with-tooltip";
 
 export function FolderToolbar() {
   const {
-    isLoading, 
+    isLoading,
     setIsLoading,
-    currentFolderPath, 
-    setCurrentFolderPath, 
-    selectedFiles, 
-    setSelectedFiles, 
-    expandedIds,
-    setExpandedIds,
-    data, 
-    setData
+    currentWatchedFolderPath: currentFolderPath,
+    setCurrentWatchedFolderPath: setCurrentFolderPath,
+    globalSelectedFiles: selectedFiles,
+    setGlobalSelectedFiles: setSelectedFiles,
+    watchedFolderData,
+    setwatchedFolderData,
+    watchedFolderExpandedIds,
+    setwatchedFolderExpandedIds
   } = useAppContext();
 
   const handleStopWatching = async () => {
     // Clear UI state
-    setData([]);
+    setwatchedFolderData([]);
     setSelectedFiles([]);
     setCurrentFolderPath("");
-    setExpandedIds([]);
-    
+    setwatchedFolderExpandedIds([]);
+
     // Clear persistent state in the store
     try {
       await invoke("save_app_state", {
@@ -41,96 +40,25 @@ export function FolderToolbar() {
 
   const handleRefreshFolder = async () => {
     if (!currentFolderPath) return;
-    
+
     try {
       setIsLoading(true);
-      const folderContents = await invoke<TreeDataItem[]>("read_folder_contents", { folderPath: currentFolderPath });
-      setData(folderContents);
+      // Get the data from your backend
+      const rawFolderContents = await invoke<any[]>("read_folder_contents", { folderPath: currentFolderPath });
+
+      // Transform the data to match the expected TreeDataItem type
+      const folderContents = rawFolderContents.map(item => ({
+        ...item,
+        path: item.path || item.id, // Add missing path if not present
+        isDirectory: item.isDirectory || item.children?.length > 0 || false // Add isDirectory if not present
+      }));
+
+      setwatchedFolderData(folderContents);
     } catch (error) {
       console.error("Error refreshing folder contents:", error);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Function to get all folder IDs for expansion
-  const getAllFolderIds = (items: TreeDataItem[]): string[] => {
-    let folderIds: string[] = [];
-    
-    const traverse = (items: TreeDataItem[]) => {
-      for (const item of items) {
-        if (item.children && item.children.length > 0) {
-          folderIds.push(item.id);
-          traverse(item.children);
-        }
-      }
-    };
-    
-    traverse(items);
-    return folderIds;
-  };
-
-  // Function to get paths to selected items
-  const getPathsToSelectedItems = (items: TreeDataItem[], targetIds: string[]): string[] => {
-    const paths: string[] = [];
-    
-    const findPaths = (items: TreeDataItem[], currentPath: string[] = []) => {
-      for (const item of items) {
-        const newPath = [...currentPath, item.id];
-        
-        // If this item is selected, add all parent folders to paths
-        if (targetIds.includes(item.id)) {
-          paths.push(...currentPath);
-        }
-        
-        // Continue traversing if this item has children
-        if (item.children && item.children.length > 0) {
-          findPaths(item.children, newPath);
-        }
-      }
-    };
-    
-    findPaths(items);
-    return [...new Set(paths)]; // Remove duplicates
-  };
-  
-  const handleExpandAll = () => {
-    const allFolderIds = getAllFolderIds(data);
-    
-    // Check if all folders are already expanded
-    const allExpanded = allFolderIds.every(id => expandedIds.includes(id));
-    
-    if (allExpanded) {
-      // If all are expanded, collapse all
-      setExpandedIds([]);
-    } else {
-      // If not all expanded, expand all
-      setExpandedIds(allFolderIds);
-    }
-  };
-  
-  const handleExpandToSelected = () => {
-    if (selectedFiles.length === 0) return;
-    
-    // Get paths to selected items
-    const pathFolders = getPathsToSelectedItems(data, selectedFiles);
-    
-    // Expand all paths to selected items (no toggling)
-    // Keep existing expanded folders
-    const newExpandedIds = [...new Set([...expandedIds, ...pathFolders])];
-    setExpandedIds(newExpandedIds);
-  };
-  
-  // Helper to determine if the button should be disabled
-  const areAllSelectedPathsExpanded = () => {
-    if (selectedFiles.length === 0) return true; // Disable if nothing selected
-    
-    const pathFolders = getPathsToSelectedItems(data, selectedFiles);
-    return pathFolders.every(id => expandedIds.includes(id));
-  };
-
-  const handleCloseAll = () => {
-    setExpandedIds([]);
   };
 
   return (
@@ -143,99 +71,58 @@ export function FolderToolbar() {
           </div>
         </div>
         <div className="flex space-x-1 flex-shrink-0">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Button 
-                  size="icon"
-                  variant="ghost" 
-                  className="h-7 w-7"
-                  onClick={handleExpandAll}
-                  disabled={isLoading}
-                >
-                  <FolderOpen className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Expand all folders</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <ButtonWithTooltip
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={() => toggleExpandAll(watchedFolderData, watchedFolderExpandedIds, setwatchedFolderExpandedIds)}
+            disabled={isLoading}
+            tooltip="Expand all folders"
+            icon={<FolderOpen className="h-3.5 w-3.5" />}
+          />
+          <ButtonWithTooltip
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={() => expandToSelected(
+              watchedFolderData,
+              selectedFiles,
+              watchedFolderExpandedIds,
+              setwatchedFolderExpandedIds
+            )}
+            disabled={isLoading || areAllSelectedPathsExpanded(
+              watchedFolderData,
+              selectedFiles,
+              watchedFolderExpandedIds
+            )}
+            tooltip="Expand all folders with selected profiles"
+            icon={<FolderOpenDot className="h-3.5 w-3.5" />}
+          />
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Button 
-                  size="icon"
-                  variant="ghost" 
-                  className="h-7 w-7"
-                  onClick={handleExpandToSelected}
-                  disabled={isLoading || areAllSelectedPathsExpanded()}
-                >
-                  <FolderOpenDot className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Expand all folders with selected profiles</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <ButtonWithTooltip
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={() => setwatchedFolderExpandedIds([])}
+            tooltip="Close all folders"
+            icon={<FolderMinus className="h-3.5 w-3.5" />}
+          />
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Button 
-                  size="icon"
-                  variant="ghost" 
-                  className="h-7 w-7"
-                  onClick={handleCloseAll}
-                >
-                  <FolderMinus className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Close all folders</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <ButtonWithTooltip
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={handleRefreshFolder}
+            tooltip="Refresh watched folder"
+            icon={<FolderSync className="h-3.5 w-3.5" />}
+            disabled={isLoading}
+          />
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Button 
-                  size="icon"
-                  variant="ghost" 
-                  className="h-7 w-7"
-                  onClick={handleRefreshFolder}
-                  disabled={isLoading}
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Refresh watched folder</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <ButtonWithTooltip
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={handleStopWatching}
+            tooltip="Stop watching folder and select new folde"
+            icon={<X className="h-3.5 w-3.5" />}
+            disabled={isLoading}
+          />
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger>
-                <Button 
-                  size="icon"
-                  variant="ghost" 
-                  className="h-7 w-7"
-                  onClick={handleStopWatching}
-                  disabled={isLoading}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Stop watching folder and select new folder</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
       </div>
     </div>

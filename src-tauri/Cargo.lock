@@ -1440,6 +1440,7 @@ name = "gsx-profile-manager"
 version = "1.0.3"
 dependencies = [
  "chrono",
+ "dirs 6.0.0",
  "serde",
  "serde_json",
  "tauri",

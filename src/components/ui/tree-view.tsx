@@ -3,6 +3,8 @@ import * as AccordionPrimitive from '@radix-ui/react-accordion'
 import { ChevronRight } from 'lucide-react'
 import { cva } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { Button } from './button'
+import { TreeDataItem } from '@/types/treeTypes'
 
 const treeVariants = cva(
     'group hover:before:opacity-100 before:absolute before:rounded-lg before:left-0 px-2 before:w-full before:opacity-0 before:bg-accent/70 before:h-[2rem] before:-z-10'
@@ -16,17 +18,6 @@ const selectedTreeVariants = cva(
 const selectedFileVariants = cva(
     'before:opacity-100 before:bg-green-200 dark:before:bg-green-900 text-green-800 dark:text-green-300'
 )
-
-interface TreeDataItem {
-    id: string
-    name: string
-    icon?: any
-    selectedIcon?: any
-    openIcon?: any
-    children?: TreeDataItem[]
-    actions?: React.ReactNode
-    onClick?: () => void
-}
 
 type TreeProps = React.HTMLAttributes<HTMLDivElement> & {
     data: TreeDataItem[] | TreeDataItem
@@ -63,7 +54,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
 
         // Internal expanded items state
         const [internalExpandedIds, setInternalExpandedIds] = React.useState<string[]>([])
-        
+
         // Use external IDs if provided, otherwise use internal state
         const selectedItemIds = externalSelectedItemIds || internalSelectedItemIds
 
@@ -71,7 +62,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
         const handleSelectChange = React.useCallback(
             (item: TreeDataItem | undefined) => {
                 if (!item) return
-                
+
                 // If no external control, manage internally
                 if (!externalSelectedItemIds) {
                     setInternalSelectedItemIds(prev => {
@@ -84,7 +75,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
                         }
                     })
                 }
-                
+
                 // Call the external handler if provided
                 if (onSelectChange) {
                     onSelectChange(item)
@@ -129,7 +120,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
             // If expandAll is true, calculate all folder IDs
             if (expandAll) {
                 const ids: string[] = [];
-                
+
                 const collectIds = (items: TreeDataItem[] | TreeDataItem) => {
                     if (items instanceof Array) {
                         for (const item of items) {
@@ -143,7 +134,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
                         collectIds(items.children);
                     }
                 };
-                
+
                 collectIds(data);
                 return ids;
             }
@@ -257,9 +248,9 @@ const TreeNode = ({
     React.useEffect(() => {
         setValue(isExpanded ? [item.id] : []);
     }, [isExpanded, item.id]);
-    
+
     const isSelected = selectedItemIds.includes(item.id);
-    
+
     return (
         <AccordionPrimitive.Root
             type="multiple"
@@ -270,30 +261,41 @@ const TreeNode = ({
                 handleExpandedChange(item.id, newValue.includes(item.id));
             }}
         >
-            <AccordionPrimitive.Item value={item.id}>
-                <AccordionTrigger
-                    className={cn(
-                        treeVariants(),
-                        isSelected && selectedTreeVariants()
+            <AccordionPrimitive.Item value={item.id} className="relative">
+                {/* Wrapper div for trigger and actions */}
+                <div className="flex items-center relative">
+                    <AccordionTrigger
+                        className={cn(
+                            treeVariants(),
+                            isSelected && selectedTreeVariants(),
+                            "flex-grow"
+                        )}
+                        onClick={(e) => {
+                            // Prevent accordion from toggling when clicking the item text
+                            e.stopPropagation();
+                            handleSelectChange(item);
+                            item.onClick?.();
+                        }}
+                    >
+                        <TreeIcon
+                            item={item}
+                            isSelected={isSelected}
+                            isOpen={value.includes(item.id)}
+                            default={defaultNodeIcon}
+                        />
+                        <span className="text-sm truncate">{item.name}</span>
+                    </AccordionTrigger>
+
+                    {/* Actions positioned absolutely but outside the button */}
+                    {item.actions && (
+                        <div className="absolute right-3 z-10">
+                            <TreeActions isSelected={isSelected}>
+                                {item.actions}
+                            </TreeActions>
+                        </div>
                     )}
-                    onClick={(e) => {
-                        // Prevent accordion from toggling when clicking the item text
-                        e.stopPropagation();
-                        handleSelectChange(item);
-                        item.onClick?.();
-                    }}
-                >
-                    <TreeIcon
-                        item={item}
-                        isSelected={isSelected}
-                        isOpen={value.includes(item.id)}
-                        default={defaultNodeIcon}
-                    />
-                    <span className="text-sm truncate">{item.name}</span>
-                    <TreeActions isSelected={isSelected}>
-                        {item.actions}
-                    </TreeActions>
-                </AccordionTrigger>
+                </div>
+
                 <AccordionContent className="ml-4 pl-1 border-l">
                     <TreeItem
                         data={item.children ? item.children : item}
@@ -331,28 +333,39 @@ const TreeLeaf = React.forwardRef<
         ref
     ) => {
         const isSelected = selectedItemIds.includes(item.id)
-        
+
         return (
-            <div
-                ref={ref}
-                className={cn(
-                    'ml-5 flex text-left items-center py-2 cursor-pointer before:right-1',
-                    treeVariants(),
-                    className,
-                    isSelected && selectedFileVariants() // Use the new variant for files
+            <div className="relative">
+                <div
+                    ref={ref}
+                    className={cn(
+                        'ml-5 flex text-left items-center py-2 cursor-pointer before:right-1 relative',
+                        treeVariants(),
+                        className,
+                        isSelected && selectedFileVariants()
+                    )}
+                    onClick={() => {
+                        handleSelectChange(item)
+                        item.onClick?.()
+                    }}
+                    {...props}
+                >
+                    <TreeIcon
+                        item={item}
+                        isSelected={isSelected}
+                        default={defaultLeafIcon}
+                    />
+                    <span className="flex-grow text-sm truncate">{item.name}</span>
+                </div>
+
+                {/* Actions positioned outside the main item div */}
+                {item.actions && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 z-10">
+                        <TreeActions isSelected={isSelected}>
+                            {item.actions}
+                        </TreeActions>
+                    </div>
                 )}
-                onClick={() => {
-                    handleSelectChange(item)
-                    item.onClick?.()
-                }}
-                {...props}
-            >
-                <TreeIcon
-                    item={item}
-                    isSelected={isSelected}
-                    default={defaultLeafIcon}
-                />
-                <span className="flex-grow text-sm truncate">{item.name}</span>
             </div>
         )
     }
@@ -363,7 +376,7 @@ const AccordionTrigger = React.forwardRef<
     React.ElementRef<typeof AccordionPrimitive.Trigger>,
     React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>
 >(({ className, children, ...props }, ref) => (
-    <AccordionPrimitive.Header>
+    <AccordionPrimitive.Header className="flex-grow">
         <AccordionPrimitive.Trigger
             ref={ref}
             className={cn(
@@ -429,16 +442,86 @@ const TreeActions = ({
     children: React.ReactNode
     isSelected: boolean
 }) => {
+    // Modify any Button elements or ButtonWithTooltip elements inside
+    const modifiedChildren = React.Children.map(children, child => {
+        if (!React.isValidElement(child)) return child;
+
+        // Handle direct Button elements
+        if (child.type === Button) {
+            const { onClick, className, children: buttonChildren, disabled, ...rest } = child.props;
+
+            return (
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation(); // Prevent triggering accordion
+                        if (!disabled && onClick) onClick(e);
+                    }}
+                    className={cn(
+                        "inline-flex items-center justify-center rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        disabled ? "opacity-50 cursor-default" : "cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                        className
+                    )}
+                    role="button"
+                    aria-disabled={disabled}
+                    {...rest}
+                >
+                    {buttonChildren}
+                </div>
+            );
+        }
+
+        // Handle ButtonWithTooltip components - Type-safe version
+        const componentType = child.type as any;
+        const isButtonWithTooltip =
+            typeof child.type === 'function' &&
+            (componentType.name === 'ButtonWithTooltip' ||
+                componentType.displayName === 'ButtonWithTooltip');
+
+        if (isButtonWithTooltip) {
+            // Extract the props from the ButtonWithTooltip
+            const { tooltip, onClick, icon, className, disabled } = child.props;
+
+            // Create a non-button version that still has a tooltip
+            return (
+                <div className="inline-block relative group">
+                    <div
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (!disabled && onClick) onClick(e);
+                        }}
+                        className={cn(
+                            "inline-flex items-center justify-center rounded-md text-sm transition-colors",
+                            disabled ? "opacity-50 cursor-default" : "cursor-pointer hover:bg-accent hover:text-accent-foreground",
+                            className
+                        )}
+                        role="button"
+                        aria-disabled={disabled}
+                    >
+                        {icon}
+                    </div>
+                    <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-popover text-popover-foreground text-xs p-1 rounded z-50">
+                        {typeof tooltip === 'string' ? <span>{tooltip}</span> : tooltip}
+                    </div>
+                </div>
+            );
+        }
+
+        // For everything else, just return the child as is
+        return child;
+    });
+
+    // Return the container with modified children
     return (
         <div
             className={cn(
-                isSelected ? 'block' : 'hidden',
-                'absolute right-3 group-hover:block flex items-center gap-2'
+                isSelected ? "block" : "hidden",
+                "group-hover:block flex items-center gap-2"
             )}
+            onClick={(e) => e.stopPropagation()} // Prevent triggering accordion when clicking actions
         >
-            {children}
+            {modifiedChildren}
         </div>
-    )
-}
+    );
+};
 
 export { TreeView, type TreeDataItem }
