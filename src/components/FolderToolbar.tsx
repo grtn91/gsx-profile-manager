@@ -1,10 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useAppContext } from "@/context/AppContext";
-import { Folder, FolderOpen, FolderOpenDot, FolderMinus, FolderSync, X } from "lucide-react";
+import { Folder, FolderOpen, FolderOpenDot, FolderMinus, FolderSync, X, ChevronDown, ChevronUp } from "lucide-react";
 import { toggleExpandAll, expandToSelected, areAllSelectedPathsExpanded } from "@/components/utils/treeViewUtils";
 import { ButtonWithTooltip } from "./ui/button-with-tooltip";
+import { Dispatch, SetStateAction } from "react";
 
-export function FolderToolbar() {
+interface FolderToolbarProps {
+  isTreeVisible: boolean;
+  setIsTreeVisible: Dispatch<SetStateAction<boolean>>;
+}
+
+export function FolderToolbar({
+  isTreeVisible,
+  setIsTreeVisible
+}: FolderToolbarProps) {
   const {
     isLoading,
     setIsLoading,
@@ -17,6 +26,27 @@ export function FolderToolbar() {
     watchedFolderExpandedIds,
     setwatchedFolderExpandedIds
   } = useAppContext();
+
+  const handleExpandAll = () => {
+    // Show tree view if it's hidden
+    if (!isTreeVisible) {
+      setIsTreeVisible(true);
+    }
+    toggleExpandAll(watchedFolderData, watchedFolderExpandedIds, setwatchedFolderExpandedIds);
+  };
+
+  const handleExpandSelected = () => {
+    // Show tree view if it's hidden
+    if (!isTreeVisible) {
+      setIsTreeVisible(true);
+    }
+    expandToSelected(
+      watchedFolderData,
+      selectedFiles,
+      watchedFolderExpandedIds,
+      setwatchedFolderExpandedIds
+    );
+  };
 
   const handleStopWatching = async () => {
     // Clear UI state
@@ -63,36 +93,44 @@ export function FolderToolbar() {
 
   return (
     <div className="mb-4 border rounded-md p-3 bg-muted/30">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center text-sm overflow-hidden mr-2">
-          <Folder className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />
-          <div className="font-medium text-muted-foreground truncate">
-            {currentFolderPath}
+      <div className="flex flex-col">
+        {/* Header row with path and toggle */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center text-sm overflow-hidden mr-2">
+            <Folder className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />
+            <div className="font-medium text-muted-foreground truncate">
+              {currentFolderPath}
+            </div>
           </div>
+          <ButtonWithTooltip
+            className="h-7 w-7"
+            variant="ghost"
+            onClick={() => setIsTreeVisible(!isTreeVisible)}
+            tooltip={isTreeVisible ? "Hide folder view" : "Show folder view"}
+            icon={isTreeVisible ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          />
         </div>
-        <div className="flex space-x-1 flex-shrink-0">
+
+        {/* Button row */}
+        <div className="flex space-x-1">
           <ButtonWithTooltip
             variant="ghost"
             className="h-7 w-7"
-            onClick={() => toggleExpandAll(watchedFolderData, watchedFolderExpandedIds, setwatchedFolderExpandedIds)}
+            onClick={handleExpandAll}
             disabled={isLoading}
             tooltip="Expand all folders"
             icon={<FolderOpen className="h-3.5 w-3.5" />}
           />
+
           <ButtonWithTooltip
             variant="ghost"
             className="h-7 w-7"
-            onClick={() => expandToSelected(
-              watchedFolderData,
-              selectedFiles,
-              watchedFolderExpandedIds,
-              setwatchedFolderExpandedIds
-            )}
-            disabled={isLoading || areAllSelectedPathsExpanded(
+            onClick={handleExpandSelected}
+            disabled={isLoading || (isTreeVisible && areAllSelectedPathsExpanded(
               watchedFolderData,
               selectedFiles,
               watchedFolderExpandedIds
-            )}
+            ))}
             tooltip="Expand all folders with selected profiles"
             icon={<FolderOpenDot className="h-3.5 w-3.5" />}
           />
@@ -118,11 +156,10 @@ export function FolderToolbar() {
             variant="ghost"
             className="h-7 w-7"
             onClick={handleStopWatching}
-            tooltip="Stop watching folder and select new folde"
+            tooltip="Stop watching folder and select new folder"
             icon={<X className="h-3.5 w-3.5" />}
             disabled={isLoading}
           />
-
         </div>
       </div>
     </div>

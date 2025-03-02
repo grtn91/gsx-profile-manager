@@ -1,9 +1,18 @@
 import { useAppContext } from "../context/AppContext";
-import { FolderLock, FolderOpen, FolderOpenDot, FolderMinus } from "lucide-react";
+import { FolderLock, FolderOpen, FolderOpenDot, FolderMinus, ChevronDown, ChevronUp } from "lucide-react";
 import { toggleExpandAll, expandToSelected, areAllSelectedPathsExpanded } from "./utils/treeViewUtils";
 import { ButtonWithTooltip } from "./ui/button-with-tooltip";
+import { Dispatch, SetStateAction } from "react";
 
-export function UserFoldersToolbar() {
+interface UserFoldersToolbarProps {
+  isTreeVisible: boolean;
+  setIsTreeVisible: Dispatch<SetStateAction<boolean>>;
+}
+
+export function UserFoldersToolbar({
+  isTreeVisible,
+  setIsTreeVisible
+}: UserFoldersToolbarProps) {
   const {
     localFolderData,
     localFolderExpandedIds,
@@ -16,6 +25,10 @@ export function UserFoldersToolbar() {
   const handleExpandAll = () => {
     try {
       console.log("Expanding all folders");
+      // Show tree view if it's hidden
+      if (!isTreeVisible) {
+        setIsTreeVisible(true);
+      }
       toggleExpandAll(
         localFolderData,
         localFolderExpandedIds,
@@ -31,6 +44,10 @@ export function UserFoldersToolbar() {
   const handleExpandToSelected = () => {
     try {
       console.log("Expanding to selected items");
+      // Show tree view if it's hidden
+      if (!isTreeVisible) {
+        setIsTreeVisible(true);
+      }
       expandToSelected(
         localFolderData,
         globalSelectedFiles,
@@ -55,14 +72,26 @@ export function UserFoldersToolbar() {
 
   return (
     <div className="mb-4 border rounded-md p-3 bg-muted/30">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center text-sm overflow-hidden mr-2">
-          <FolderLock className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />
-          <div className="font-medium text-muted-foreground">
-            GSX-PM Store
+      <div className="flex flex-col">
+        {/* Header row with title and toggle */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center text-sm overflow-hidden mr-2">
+            <FolderLock className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />
+            <div className="font-medium text-muted-foreground">
+              GSX-PM Store
+            </div>
           </div>
+          <ButtonWithTooltip
+            className="h-7 w-7"
+            variant="ghost"
+            onClick={() => setIsTreeVisible(!isTreeVisible)}
+            tooltip={isTreeVisible ? "Hide folders" : "Show folders"}
+            icon={isTreeVisible ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          />
         </div>
-        <div className="flex space-x-1 flex-shrink-0">
+
+        {/* Button row */}
+        <div className="flex space-x-1">
           <ButtonWithTooltip
             className="h-7 w-7"
             variant="ghost"
@@ -76,11 +105,11 @@ export function UserFoldersToolbar() {
             className="h-7 w-7"
             variant="ghost"
             onClick={handleExpandToSelected}
-            disabled={isLoading || areAllSelectedPathsExpanded(
+            disabled={isLoading || (isTreeVisible && areAllSelectedPathsExpanded(
               localFolderData,
               globalSelectedFiles,
               localFolderExpandedIds
-            )}
+            ))}
             tooltip="Expand folders with selected profiles"
             icon={<FolderOpenDot className="h-3.5 w-3.5" />}
           />

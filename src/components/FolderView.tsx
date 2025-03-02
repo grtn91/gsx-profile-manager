@@ -2,14 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { TreeView, TreeDataItem } from './ui/tree-view';
 import { useAppContext } from "../context/AppContext";
 import { Button } from "./ui/button";
-import { Eye, FileUser } from "lucide-react";
+import { Eye, FileUser, Loader2 } from "lucide-react";
 import { FolderToolbar } from "./FolderToolbar";
 import { SelectedFolders } from "./SelectedFolders";
 import { UserFoldersView } from "./UserFoldersView";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function FolderView() {
   const {
+    isLoading,
     setIsLoading,
     currentWatchedFolderPath,
     setCurrentWatchedFolderPath,
@@ -22,6 +23,9 @@ export function FolderView() {
     refreshWatchedFolders,
     localFolderExpandedIds
   } = useAppContext();
+
+  // State for toggling the watched folder tree view
+  const [isWatchedFolderVisible, setIsWatchedFolderVisible] = useState(true);
 
   // Add a useEffect to load folder data if path exists but data doesn't
   useEffect(() => {
@@ -90,22 +94,33 @@ export function FolderView() {
         <div className="grid grid-cols-3 gap-4">
           {/* Left Column (1/3) - Tree Views */}
           <div className="col-span-1 space-y-4">
+            {/* User Folders Section */}
             <UserFoldersView />
+
+            {/* Watched Folder Section */}
             <div>
-              <FolderToolbar />
-              <div className="border rounded p-2">
-                <TreeView
-                  data={watchedFolderData}
-                  onSelectChange={handleSelectChange}
-                  selectedItemIds={selectedFiles}
-                  defaultLeafIcon={FileUser}
-                  expandedIds={watchedFolderExpandedIds}
-                  onExpandedIdsChange={setwatchedFolderExpandedIds}
-                />
-              </div>
+              <FolderToolbar
+                isTreeVisible={isWatchedFolderVisible}
+                setIsTreeVisible={setIsWatchedFolderVisible}
+              />
+              {isWatchedFolderVisible && (
+                <div className="border rounded p-2 relative">
+                  {isLoading && (
+                    <div className="absolute inset-0 bg-background/70 flex items-center justify-center z-10">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  )}
+                  <TreeView
+                    data={watchedFolderData}
+                    onSelectChange={handleSelectChange}
+                    selectedItemIds={selectedFiles}
+                    defaultLeafIcon={FileUser}
+                    expandedIds={watchedFolderExpandedIds}
+                    onExpandedIdsChange={setwatchedFolderExpandedIds}
+                  />
+                </div>
+              )}
             </div>
-
-
           </div>
 
           {/* Right Column (2/3) - Selected Files */}
