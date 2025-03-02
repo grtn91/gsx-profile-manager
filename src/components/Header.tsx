@@ -14,7 +14,7 @@ function Header() {
         <ButtonWithTooltip
           variant="ghost"
           tooltip={<a href="mailto:m.groten@yahoo.de">info@groten.cloud</a>}
-          icon={<Badge className="mr-2.5" variant="secondary">v1.0.3</Badge>}
+          icon={<Badge className="mr-4" variant="secondary">v1.0.3</Badge>}
         />
 
         {/* Support link */}
