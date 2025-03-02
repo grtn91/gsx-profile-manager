@@ -7,44 +7,46 @@ import logoSvg from './assets/gsx-manager-logo.svg';
 import { ActionBar } from "./components/ActionBar";
 import { Toaster } from "sonner";
 import Header from "./components/Header";
+import { DebugPanel } from "./components/DebugPanel";
 
 
 function App() {
 
-    const {
-      isLoading
-    } 
+  const {
+    isLoading
+  }
     = useAppContext();
-  
+
 
   return (
     <div>
-    <Toaster 
-    position="top-center" 
-    duration={2000} 
-    closeButton={true}
-    icons={{
-      "success": <CircleCheckBig />
-    }}
-    />
-    {isLoading ? (
+      <Toaster
+        position="top-center"
+        duration={2000}
+        closeButton={true}
+        icons={{
+          "success": <CircleCheckBig />
+        }}
+      />
+      {isLoading ? (
         <div className="container mx-auto h-dvh flex flex-col items-center justify-center">
-        <div className="flex flex-col items-center gap-8">
-          <img src={logoSvg} alt="Logo" width={300} height={200} className="mb-4" />
-          <Spinner size="w-30 h-30" />
+          <div className="flex flex-col items-center gap-8">
+            <img src={logoSvg} alt="Logo" width={300} height={200} className="mb-4" />
+            <Spinner size="w-30 h-30" />
+          </div>
         </div>
-      </div>
       ) : (
-      <main>
-      <Header />
-      <div className="container mx-auto">
-        <FolderView />
-      </div>
-      {/* Add the ActionBar component */}
-      <ActionBar />
-      </main>
+        <main>
+          <Header />
+          <div className="container mx-auto">
+            <FolderView />
+            <DebugPanel />
+          </div>
+          {/* Add the ActionBar component */}
+          <ActionBar />
+        </main>
       )
-    }
+      }
     </div>
   );
 }

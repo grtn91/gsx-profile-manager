@@ -24,9 +24,18 @@ interface AppContextType {
   setlocalFolderExpandedIds: React.Dispatch<React.SetStateAction<string[]>>;
   refreshLocalFolders: () => Promise<void>;
 
+  // New initialization functions
+  initializeLocalFolder: () => Promise<void>;
+
   // Application state
   isLoading: boolean;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+
+  // Initialization states - replacing simplified mode
+  folderWatchInitialized: boolean;
+  setFolderWatchInitialized: React.Dispatch<React.SetStateAction<boolean>>;
+  localFolderInitialized: boolean;
+  setLocalFolderInitialized: React.Dispatch<React.SetStateAction<boolean>>;
 
   // Session management
   saveAppState: () => Promise<void>;
@@ -36,22 +45,19 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  // Flag to track if initial state has been loaded
-  const hasLoadedState = useRef(false);
-  // Global selection state
-  const [globalSelectedFiles, setGlobalSelectedFiles] = useState<string[]>([]);
-
-  // Watched folders state
-  const [watchedFolderData, setwatchedFolderData] = useState<TreeDataItem[]>([]);
-  const [watchedFolderExpandedIds, setwatchedFolderExpandedIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [currentWatchedFolderPath, setCurrentWatchedFolderPath] = useState<string | null>(null);
-
-  // Local folders state (internal app storage)
+  const [globalSelectedFiles, setGlobalSelectedFiles] = useState<string[]>([]);
+  const [watchedFolderData, setwatchedFolderData] = useState<TreeDataItem[]>([]);
   const [localFolderData, setLocalFolderData] = useState<TreeDataItem[]>([]);
+  const [watchedFolderExpandedIds, setwatchedFolderExpandedIds] = useState<string[]>([]);
   const [localFolderExpandedIds, setlocalFolderExpandedIds] = useState<string[]>([]);
 
-  // Application state
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  // Replace isSimplifiedMode with two separate initialization states
+  const [folderWatchInitialized, setFolderWatchInitialized] = useState<boolean>(false);
+  const [localFolderInitialized, setLocalFolderInitialized] = useState<boolean>(false);
+
+  const hasLoadedState = useRef<boolean>(false);
 
   const saveAppState = async () => {
     // Don't save state until initial load is complete
@@ -61,18 +67,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      /* console.log("Saving app state:", {
-        currentFolder: currentWatchedFolderPath,
-        selectedFiles: globalSelectedFiles.length,
-        expandedIds: watchedFolderExpandedIds.length,
-        localExpandedIds: localFolderExpandedIds.length
-      }); */
+      console.log("Saving app state with explicit initialization flags:", {
+        folderWatchInitialized,
+        localFolderInitialized
+      });
 
       await invoke("save_app_state", {
         currentFolder: currentWatchedFolderPath,
         selectedFiles: globalSelectedFiles,
         expandedIds: watchedFolderExpandedIds,
-        localExpandedIds: localFolderExpandedIds
+        localExpandedIds: localFolderExpandedIds,
+        // CRITICAL FIX: Always pass the current state values
+        folder_watch_initialized: folderWatchInitialized,
+        local_folder_initialized: localFolderInitialized
       });
     } catch (error) {
       console.error("Failed to save app state:", error);
@@ -86,6 +93,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Call the Tauri command to refresh local folders
       const folderContents = await invoke<TreeDataItem[]>("refresh_local_folders");
       setLocalFolderData(folderContents);
+
+      if (folderContents.length > 0 && !localFolderInitialized) {
+        // If we found content but local folder wasn't marked as initialized
+        setLocalFolderInitialized(true);
+      }
     } catch (error) {
       console.error("Error refreshing local folders:", error);
     } finally {
@@ -93,7 +105,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Add this function after refreshLocalFolders and before useEffect blocks
+  const initializeLocalFolder = async () => {
+    try {
+      setIsLoading(true);
+      console.log("Initializing local folder structure...");
+
+      // Create the local folder structure via backend
+      await invoke("initialize_local_folders");
+
+      // Explicitly set this state right away
+      setLocalFolderInitialized(true);
+
+      // Refresh the local folders to get updated data
+      const localFolders = await invoke<TreeDataItem[]>("refresh_local_folders");
+      setLocalFolderData(localFolders);
+
+      // Save app state with updated initialization flags
+      await saveAppState();
+
+      // Add this to debug the app data location
+      try {
+        const appDataPath = await invoke<string>("get_app_data_path");
+        console.log("App data is stored at:", appDataPath);
+      } catch (e) {
+        console.log("Couldn't get app data path:", e);
+      }
+
+      console.log("Local folder structure initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize local folder structure:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Function to refresh watched folders
   const refreshWatchedFolders = async () => {
     if (!currentWatchedFolderPath) {
@@ -105,6 +150,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       console.log("Refreshing watched folder:", currentWatchedFolderPath);
 
+      // Regular folder handling
       const folderContents = await invoke<TreeDataItem[]>("read_folder_contents", {
         folderPath: currentWatchedFolderPath
       });
@@ -123,23 +169,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Don't save on initial render or before initial load
     if (!hasLoadedState.current) return;
 
-    /*     console.log("State changed, scheduling save...", {
-          currentFolder: currentWatchedFolderPath,
-          selectedFilesCount: globalSelectedFiles.length
-        }); */
-
     const timeoutId = setTimeout(() => {
       saveAppState();
     }, 500); // Debounce for 500ms
 
     return () => clearTimeout(timeoutId);
-  }, [currentWatchedFolderPath, globalSelectedFiles, watchedFolderExpandedIds, localFolderExpandedIds]);
+  }, [
+    currentWatchedFolderPath,
+    globalSelectedFiles,
+    watchedFolderExpandedIds,
+    localFolderExpandedIds,
+    folderWatchInitialized,
+    localFolderInitialized
+  ]);
 
   // Load app state on initial mount
   useEffect(() => {
     const loadInitialState = async () => {
       try {
         setIsLoading(true);
+        console.log("Loading initial state...");
+
+        // Debug what's in the file first
+        try {
+          const fileContent = await invoke<string>("debug_read_app_settings");
+          console.log("STARTUP - Settings file content:", fileContent);
+        } catch (err) {
+          console.error("Failed to read settings file:", err);
+        }
 
         // Load saved app state
         const appState = await invoke<{
@@ -147,14 +204,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
           selectedFiles: string[];
           expandedIds: string[];
           localExpandedIds: string[];
+          folderWatchInitialized: boolean;
+          localFolderInitialized: boolean;
         }>("load_app_state");
 
-        // Apply the loaded state if it exists
-        if (appState.currentFolder) {
+        console.log("Loaded app state:", appState);
+        console.log("localFolderInitialized value type:", typeof appState.localFolderInitialized);
+        console.log("folderWatchInitialized value type:", typeof appState.folderWatchInitialized);
+
+        // Let's try to debug-save the state at startup too
+        await invoke("save_app_state", {
+          currentFolder: appState.currentFolder,
+          selectedFiles: appState.selectedFiles || [],
+          expandedIds: appState.expandedIds || [],
+          localExpandedIds: appState.localExpandedIds || [],
+          folder_watch_initialized: appState.folderWatchInitialized,
+          local_folder_initialized: appState.localFolderInitialized
+        });
+
+        // Make sure to use direct boolean values instead of checking for undefined
+        const watchInitialized = typeof appState.folderWatchInitialized === 'boolean'
+          ? appState.folderWatchInitialized
+          : false;
+
+        const localInitialized = typeof appState.localFolderInitialized === 'boolean'
+          ? appState.localFolderInitialized
+          : false;
+
+        console.log("Setting folder watch initialized to:", watchInitialized);
+        setFolderWatchInitialized(watchInitialized);
+
+        console.log("Setting local folder initialized to:", localInitialized);
+        setLocalFolderInitialized(localInitialized);
+
+        // Only set the current folder if watch is initialized
+        if (appState.currentFolder && watchInitialized) {
+          console.log("Setting watched folder path:", appState.currentFolder);
           setCurrentWatchedFolderPath(appState.currentFolder);
 
+          // Load watched folder contents
           try {
-            // Load folder contents
             const folderContents = await invoke<TreeDataItem[]>(
               "read_folder_contents",
               { folderPath: appState.currentFolder }
@@ -164,6 +253,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             console.error("Error loading watched folder contents:", error);
           }
         }
+
+        console.log("Is folder watch initialized?", watchInitialized);
+        console.log("Is local folder initialized?", localInitialized);
 
         if (appState.selectedFiles && appState.selectedFiles.length > 0) {
           setGlobalSelectedFiles(appState.selectedFiles);
@@ -180,16 +272,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // Mark that we've loaded initial state - IMPORTANT!
         hasLoadedState.current = true;
 
-        // Load local folders regardless of saved state
-        await refreshLocalFolders();
+        // Load local folders if they're initialized
+        if (appState.localFolderInitialized) {
+          await refreshLocalFolders();
+        }
+        // After everything is loaded
+        console.log("Initial state loaded successfully!");
       } catch (error) {
-        console.error("Failed to load initial app state:", error);
-        // Still try to load local folders even if loading saved state fails
-        await refreshLocalFolders();
-        // Still mark as loaded so we can save later
-        hasLoadedState.current = true;
+        console.error("Error loading initial state:", error);
       } finally {
         setIsLoading(false);
+        hasLoadedState.current = true;
       }
     };
 
@@ -217,10 +310,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localFolderExpandedIds,
     setlocalFolderExpandedIds,
     refreshLocalFolders,
+    initializeLocalFolder,
 
     // Application state
     isLoading,
     setIsLoading,
+
+    // Initialization states - replacing simplified mode
+    folderWatchInitialized,
+    setFolderWatchInitialized,
+    localFolderInitialized,
+    setLocalFolderInitialized,
 
     // Session management
     saveAppState

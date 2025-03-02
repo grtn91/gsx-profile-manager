@@ -1,63 +1,33 @@
-import { invoke } from "@tauri-apps/api/core";
-import { useAppContext } from "@/context/AppContext";
-import { Folder, FolderOpen, FolderOpenDot, FolderMinus, FolderSync, X } from "lucide-react";
-import { toggleExpandAll, expandToSelected, areAllSelectedPathsExpanded } from "@/components/utils/treeViewUtils";
+import { ExternalLink, Folder, FolderOpen, FolderSearch, RefreshCw } from "lucide-react";
 import { ButtonWithTooltip } from "./ui/button-with-tooltip";
+import { useAppContext } from "@/context/AppContext";
+import { invoke } from "@tauri-apps/api/core";
 
-export function FolderToolbar() {
+// Define the props interface
+interface FolderToolbarProps {
+  isWatchInitialized?: boolean;
+  showWatchFolderButton?: boolean;
+  onWatchFolder?: () => Promise<void>;
+}
+
+export function FolderToolbar({
+  isWatchInitialized = false,
+  showWatchFolderButton = false,
+  onWatchFolder
+}: FolderToolbarProps) {
   const {
-    isLoading,
-    setIsLoading,
-    currentWatchedFolderPath: currentFolderPath,
-    setCurrentWatchedFolderPath: setCurrentFolderPath,
-    globalSelectedFiles: selectedFiles,
-    setGlobalSelectedFiles: setSelectedFiles,
-    watchedFolderData,
-    setwatchedFolderData,
-    watchedFolderExpandedIds,
-    setwatchedFolderExpandedIds
+    currentWatchedFolderPath,
+    refreshWatchedFolders
   } = useAppContext();
 
-  const handleStopWatching = async () => {
-    // Clear UI state
-    setwatchedFolderData([]);
-    setSelectedFiles([]);
-    setCurrentFolderPath("");
-    setwatchedFolderExpandedIds([]);
-
-    // Clear persistent state in the store
-    try {
-      await invoke("save_app_state", {
-        currentFolder: null,
-        selectedFiles: [],
-        expandedIds: []
-      });
-      console.log("Store data cleared successfully");
-    } catch (error) {
-      console.error("Failed to clear store data:", error);
-    }
-  };
-
-  const handleRefreshFolder = async () => {
-    if (!currentFolderPath) return;
+  // Add the missing handleOpenFolder function
+  const handleOpenFolder = async () => {
+    if (!currentWatchedFolderPath) return;
 
     try {
-      setIsLoading(true);
-      // Get the data from your backend
-      const rawFolderContents = await invoke<any[]>("read_folder_contents", { folderPath: currentFolderPath });
-
-      // Transform the data to match the expected TreeDataItem type
-      const folderContents = rawFolderContents.map(item => ({
-        ...item,
-        path: item.path || item.id, // Add missing path if not present
-        isDirectory: item.isDirectory || item.children?.length > 0 || false // Add isDirectory if not present
-      }));
-
-      setwatchedFolderData(folderContents);
+      await invoke("open_folder_in_explorer", { folderPath: currentWatchedFolderPath });
     } catch (error) {
-      console.error("Error refreshing folder contents:", error);
-    } finally {
-      setIsLoading(false);
+      console.error("Error opening folder:", error);
     }
   };
 
@@ -65,68 +35,54 @@ export function FolderToolbar() {
     <div className="mb-4 border rounded-md p-3 bg-muted/30">
       <div className="flex items-center justify-between">
         <div className="flex items-center text-sm overflow-hidden mr-2">
-          <Folder className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />
-          <div className="font-medium text-muted-foreground truncate">
-            {currentFolderPath}
-          </div>
+          {currentWatchedFolderPath ? (
+            <>
+              <FolderOpen className="h-4 w-4 mr-2 flex-shrink-0" />
+              <div className="font-medium text-muted-foreground truncate">
+                {currentWatchedFolderPath}
+              </div>
+            </>
+          ) : (
+            <>
+              <Folder className="h-4 w-4 mr-2 flex-shrink-0" />
+              <div className="font-medium text-muted-foreground">
+                Watched Folder
+              </div>
+            </>
+          )}
         </div>
-        <div className="flex space-x-1 flex-shrink-0">
-          <ButtonWithTooltip
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={() => toggleExpandAll(watchedFolderData, watchedFolderExpandedIds, setwatchedFolderExpandedIds)}
-            disabled={isLoading}
-            tooltip="Expand all folders"
-            icon={<FolderOpen className="h-3.5 w-3.5" />}
-          />
-          <ButtonWithTooltip
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={() => expandToSelected(
-              watchedFolderData,
-              selectedFiles,
-              watchedFolderExpandedIds,
-              setwatchedFolderExpandedIds
-            )}
-            disabled={isLoading || areAllSelectedPathsExpanded(
-              watchedFolderData,
-              selectedFiles,
-              watchedFolderExpandedIds
-            )}
-            tooltip="Expand all folders with selected profiles"
-            icon={<FolderOpenDot className="h-3.5 w-3.5" />}
-          />
 
-          <ButtonWithTooltip
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={() => setwatchedFolderExpandedIds([])}
-            tooltip="Close all folders"
-            icon={<FolderMinus className="h-3.5 w-3.5" />}
-          />
+        <div className="flex items-center gap-2">
+          {/* Watch folder button when not initialized */}
+          {showWatchFolderButton && onWatchFolder && (
+            <ButtonWithTooltip
+              variant="ghost"
+              onClick={onWatchFolder}
+              tooltip={isWatchInitialized ? "Change watched folder" : "Watch a folder"}
+              icon={<FolderSearch className="h-4 w-4" />}
+            />
+          )}
 
-          <ButtonWithTooltip
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={handleRefreshFolder}
-            tooltip="Refresh watched folder"
-            icon={<FolderSync className="h-3.5 w-3.5" />}
-            disabled={isLoading}
-          />
+          {/* Only show these buttons when a folder is being watched */}
+          {currentWatchedFolderPath && (
+            <>
+              <ButtonWithTooltip
+                variant="ghost"
+                onClick={refreshWatchedFolders}
+                tooltip="Refresh folder"
+                icon={<RefreshCw className="h-4 w-4" />}
+              />
 
-          <ButtonWithTooltip
-            variant="ghost"
-            className="h-7 w-7"
-            onClick={handleStopWatching}
-            tooltip="Stop watching folder and select new folde"
-            icon={<X className="h-3.5 w-3.5" />}
-            disabled={isLoading}
-          />
-
+              <ButtonWithTooltip
+                variant="ghost"
+                icon={<ExternalLink className="h-4 w-4" />}
+                onClick={handleOpenFolder}
+                tooltip="Open in explorer"
+              />
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-export default FolderToolbar;

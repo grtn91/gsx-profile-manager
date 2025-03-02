@@ -4,9 +4,9 @@
 )]
 
 mod modules;
+use modules::app_state;
 use modules::file_system;
 use modules::profile_manager;
-use modules::app_state;
 use modules::user_folders;
 
 fn main() {
@@ -15,17 +15,16 @@ fn main() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             // File system operations
-            file_system::read_folder_contents, 
-            file_system::select_folder, 
+            file_system::read_folder_contents,
+            file_system::select_folder,
             file_system::check_folder_exists,
-            
             // Profile management
             profile_manager::activate_profiles,
-            
             // App state operations
             app_state::save_app_state,
             app_state::load_app_state,
-
+            app_state::get_app_data_path,
+            app_state::debug_read_app_settings,
             // User Folder
             user_folders::get_user_folders,
             user_folders::create_user_folder,
@@ -36,6 +35,7 @@ fn main() {
             user_folders::copy_file_to_user_folder,
             user_folders::sync_user_folders_with_watched,
             user_folders::refresh_local_folders,
+            user_folders::initialize_local_folders,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Tauri application");
