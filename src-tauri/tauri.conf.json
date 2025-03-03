@@ -15,7 +15,8 @@
         "title": "GSX Profile Manager",
         "width": 1200,
         "height": 800,
-        "resizable": true
+        "resizable": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {
@@ -35,10 +36,23 @@
   },
   "plugins": {
     "sql": {
-      "driver": "sqlite"
+      "default": "sqlite",
+      "connections": {
+        "sqlite": {
+          "path": "{appDataDir}/gsx_profiles.db",
+          "mode": "Rw"
+        }
+      }
     },
-    "store": null,
     "dialog": null,
-    "opener": null
+    "opener": null,
+    "allowlist": {
+      "path": {
+        "all": true
+      },
+      "fs": {
+        "all": true
+      }
+    }
   }
 }
