@@ -12,10 +12,42 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import ProfileUploader from "@/features/profile-uploader/components/profile-uploader";
+import { DialogDescription } from "@radix-ui/react-dialog";
+import { useProfileStore } from "@/store/useGsxProfileStore";
+import { toast } from "sonner";
+import { invoke } from "@tauri-apps/api/core";
 
 function Header() {
   // State to control the visibility of the profile uploader modal
   const [showProfileUploader, setShowProfileUploader] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
+  const { getSyncedProfiles } = useProfileStore();
+
+  const handleApplyProfiles = async () => {
+    try {
+      setIsApplying(true);
+      const syncedProfiles = getSyncedProfiles();
+
+      if (syncedProfiles.length === 0) {
+        toast.warning("No profiles are currently synced. Please sync at least one profile first.");
+        return;
+      }
+
+      // Extract all file paths from the synced profiles
+      const filePaths = syncedProfiles.flatMap(profile => profile.filePaths);
+
+      // Call the Rust command to activate profiles - Use camelCase for parameter names
+      const result = await invoke<string>("activate_profiles", {
+        selectedFiles: filePaths // Changed from selected_files to selectedFiles
+      });
+
+      toast.success(result);
+    } catch (error) {
+      toast.error(`Failed to apply profiles: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsApplying(false);
+    }
+  };
 
   return (
     <header className="flex flex-row items-center justify-between p-10 bg-gray-100">
@@ -37,6 +69,8 @@ function Header() {
           variant="secondary"
           size="lg"
           className="flex items-center gap-2"
+          onClick={() => handleApplyProfiles()}
+          disabled={isApplying}
         >
           <Play className="h-5 w-5" />
           <span>Apply Profiles</span>
@@ -84,6 +118,7 @@ function Header() {
       {/* Profile Uploader Modal */}
       <Dialog open={showProfileUploader} onOpenChange={setShowProfileUploader}>
         <DialogContent className="min-w-fit">
+          <DialogDescription />
           <DialogHeader>
             <DialogTitle>Upload GSX Profile</DialogTitle>
           </DialogHeader>

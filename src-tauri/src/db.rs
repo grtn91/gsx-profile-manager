@@ -8,7 +8,6 @@ pub fn init() {
         create_db_file();
     }
 }
-
 // Create the database file.
 fn create_db_file() {
     let db_path = get_db_path();

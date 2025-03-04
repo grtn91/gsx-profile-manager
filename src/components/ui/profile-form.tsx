@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { LocationOption, ProfileFormValues } from '../blocks/profile-uploader/types';
+import { LocationOption, ProfileFormValues } from '@/types/common';
 
 interface ProfileFormProps {
     form: UseFormReturn<ProfileFormValues>;
@@ -35,6 +35,13 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 }) => {
     const watchContinent = form.watch('continent');
     const watchCountry = form.watch('country');
+
+    const checkButtonDisabled = () => {
+        if (!hasFiles) return true;
+        if (!watchContinent) return true;
+        if (!watchCountry) return true;
+        if (!form.getValues('airportIcaoCode')) return true;
+    }
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -100,7 +107,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
             {/* ICAO Code Select */}
             <FormField
                 control={form.control}
-                name="icaoCode"
+                name="airportIcaoCode"
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>ICAO Code</FormLabel>
@@ -159,7 +166,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
             <div>
                 <h2 className="text-sm font-medium mb-1.5">Add Profile</h2>
-                <Button type="submit" className="w-full" disabled={!hasFiles}>
+                <Button type="submit" className="w-full" disabled={checkButtonDisabled()}>
                     Add Profile
                 </Button>
             </div>

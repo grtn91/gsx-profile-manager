@@ -6,7 +6,24 @@ export interface GSXProfile {
     continent: string,
     country: string,
     airportIcaoCode: string,
-    developer: string,
-    version: string,
-    files: File[],
+    airportDeveloper?: string | undefined,
+    profileVersion?: string | undefined,
+    additionalInfo?: string | undefined,
+    filePaths: string[],
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface File {
+    name: string;
+    path: string;
+    size: number;
+    type: string;
+}
+
+export type ProfileFormData = Omit<GSXProfile, 'id' | 'status' | 'createdAt' | 'updatedAt'>;
+
+export enum SyncStatus {
+    SYNCED = 'Synced',
+    NOT_SYNCED = 'Not Synced'
 }

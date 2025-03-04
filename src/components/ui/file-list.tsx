@@ -1,7 +1,7 @@
 import React from 'react';
 import { FileType } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { FileWithDetails } from '../blocks/profile-uploader/types';
+import { FileWithDetails } from '@/types/common';
 
 interface FileListProps {
     files: FileWithDetails[];

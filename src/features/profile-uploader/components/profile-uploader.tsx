@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { useDatabase } from '@/context/Database';
+import { path } from '@tauri-apps/api';
+import { appDataDir } from '@tauri-apps/api/path';
 import {
     Card,
     CardContent,
@@ -15,12 +16,17 @@ import { FileDropzone } from '@/components/ui/dropzone';
 import { FileList } from '@/components/ui/file-list';
 import { ProfileForm } from '@/components/ui/profile-form';
 import { CONTINENTS, COUNTRIES, AIRPORT_ICAO_CODES } from '@/lib/constants';
-import { FileWithDetails, LocationOption, ProfileFormValues, formSchema } from '@/types/common';
+import { LocationOption, ProfileFormValues, formSchema } from '@/types/common';
+import { saveFilesToNestedPath } from '../utils/saveFilesToNestedPath';
+import { useProfileStore } from '@/store/useGsxProfileStore';
+import { GSXProfile } from '@/types/gsx-profile';
 
 export const ProfileUploader: React.FC = () => {
-    const [files, setFiles] = useState<FileWithDetails[]>([]);
+    const [files, setFiles] = useState<File[]>([]);
     const [availableCountries, setAvailableCountries] = useState<LocationOption[]>([]);
     const [availableIcaoCodes, setAvailableIcaoCodes] = useState<LocationOption[]>([]);
+
+    const { addProfile } = useProfileStore();
 
     // Initialize form
     const form = useForm<ProfileFormValues>({
@@ -28,7 +34,7 @@ export const ProfileUploader: React.FC = () => {
         defaultValues: {
             continent: "",
             country: "",
-            icaoCode: "",
+            airportIcaoCode: "",
             airportDeveloper: "",
             profileVersion: ""
         },
@@ -38,12 +44,16 @@ export const ProfileUploader: React.FC = () => {
     const watchContinent = form.watch('continent');
     const watchCountry = form.watch('country');
 
+    const isDuplicateFile = (newFile: File, existingFiles: File[]): boolean => {
+        return existingFiles.some(existingFile => existingFile.name === newFile.name);
+    };
+
     // Update available countries when continent changes
     useEffect(() => {
         if (watchContinent) {
             setAvailableCountries(COUNTRIES[watchContinent] || []);
             form.setValue('country', '');
-            form.setValue('icaoCode', '');
+            form.setValue('airportIcaoCode', '');
             setAvailableIcaoCodes([]);
         }
     }, [watchContinent, form]);
@@ -52,35 +62,81 @@ export const ProfileUploader: React.FC = () => {
     useEffect(() => {
         if (watchCountry) {
             setAvailableIcaoCodes(AIRPORT_ICAO_CODES[watchCountry] || []);
-            form.setValue('icaoCode', '');
+            form.setValue('airportIcaoCode', '');
         }
     }, [watchCountry, form]);
 
-    // Handle file drop
-    const handleFilesAdded = useCallback((acceptedFiles: File[]) => {
-        const validFiles = acceptedFiles.filter(
-            file => file.name.endsWith('.py') || file.name.endsWith('.ini')
-        );
+    // Handle file drop - updated with duplicate checking
+    const handleFilesAdded = useCallback(async (acceptedFiles: File[]) => {
+        // Filter out duplicates
+        const uniqueFiles = acceptedFiles.filter(file => !isDuplicateFile(file, files));
+        const duplicateFiles = acceptedFiles.filter(file => isDuplicateFile(file, files));
 
-        if (validFiles.length !== acceptedFiles.length) {
-            toast.error("Some files were rejected. Only .py and .ini files are allowed.");
+        // Only add unique files to state
+        if (uniqueFiles.length > 0) {
+            setFiles(prev => [...prev, ...uniqueFiles]);
+            toast.success(`${uniqueFiles.length} file(s) uploaded successfully!`);
         }
 
-        if (validFiles.length > 0) {
-            setFiles(prev => [...prev, ...validFiles]);
-            toast.success(`Added ${validFiles.length} file(s)`);
+        // Notify about duplicates
+        if (duplicateFiles.length > 0) {
+            const duplicateNames = duplicateFiles.map(file => file.name).join(", ");
+            toast.warning(`Skipped ${duplicateFiles.length} duplicate file(s): ${duplicateNames}`);
         }
-    }, []);
+    }, [files]);
 
     // Remove a file from the list
-    const handleRemoveFile = (index: number) => {
-        setFiles(prev => prev.filter((_, i) => i !== index));
+    const handleRemoveFile = async (index: number) => {
+        try {
+            setFiles(prev => prev.filter((_, i) => i !== index));
+        } catch (error) {
+            console.error("Error removing file:", error);
+            toast.error(`Failed to remove file: ${error instanceof Error ? error.message : String(error)}`);
+        }
     };
 
     // Handle form submission
     const onSubmit = async (data: ProfileFormValues) => {
-        // Implementation for saving profile will go here
-        toast.info("Profile submission will be implemented soon!");
+        try {
+            // Create a nested path structure
+            const baseDir = await appDataDir();
+
+            const pathConfig = {
+                basePath: baseDir,
+                rootFolder: "gsx-profiles",
+                segments: [
+                    data.continent,
+                    data.country,
+                    data.airportIcaoCode,
+                    data.airportDeveloper?.trim() || undefined,
+                    data.profileVersion?.trim() || undefined
+                ]
+            };
+
+            const profileDir = await saveFilesToNestedPath(files, pathConfig);
+
+            // Generate full file paths including filenames
+            const fullFilePaths = await Promise.all(
+                files.map(async file => await path.join(profileDir, file.name))
+            );
+
+            const profileData: GSXProfile = {
+                ...data,
+                filePaths: fullFilePaths, // Store complete paths with filenames
+                id: crypto.randomUUID(), // Generate a unique ID for the profile
+                createdAt: new Date(),
+                status: false,
+                updatedAt: new Date()
+            };
+
+
+            const data2 = await addProfile(profileData);
+            console.log("Saved profile data:", data2);
+            toast.success(`Profile saved to ${profileDir} !`);
+        } catch (error) {
+            console.error("Error saving profile:", error);
+            toast.error(`Failed to save profile: ${error instanceof Error ? error.message : String(error)}`);
+        }
     };
 
     return (

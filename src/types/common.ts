@@ -1,4 +1,6 @@
+import { UUID } from 'crypto';
 import { z } from 'zod';
+
 
 // Form validation schema
 export const formSchema = z.object({
@@ -8,7 +10,7 @@ export const formSchema = z.object({
     country: z.string({
         required_error: "Please select a country",
     }),
-    icaoCode: z.string({
+    airportIcaoCode: z.string({
         required_error: "Please select an ICAO code",
     }),
     airportDeveloper: z.string().optional(),
@@ -31,7 +33,10 @@ export interface LocationOption {
 
 // File with additional properties
 export interface FileWithDetails extends File {
-    id?: string;
+    id?: UUID;
+    batchId?: UUID;
+    content?: Promise<string>;
+    savedPath?: string;
 }
 
 // Form data type from zod schema
