@@ -29,8 +29,9 @@ For future updates beyond Version 2, this step will not be necessary or recommen
 5. **Done! 🎉** Your GSX profile is now active without unnecessary file duplication.
 
 # 💡 Future Improvements
-🔹 **Drag & Drop Support** – Easily add profiles by dragging them into the app.
-🔹 **Community Folder Detection** – Automatically locate GSX profiles in the MSFS Community folder.
+🔹 **Drag & Drop Support for Zip Files** – Easily add profiles by dragging the zip into the app.
+🔹 **Import from Simbrief** – Activate Profiles Based on your Simbrief Route
+🔹 **Import from flightsim.to** – I will try to find a way directly import from flightsim.to and kind of have an internal app store
 🔹 **Expanded Profile Management** – Improved sorting and filtering options for better usability.
 
 # 💖 Support the Project
