@@ -1,90 +1,37 @@
-# 🚀 GSX Profile Manager – Streamline Your Ground Handling Profiles!
+## GSX Profile Manager - Version 2.0
+🚀 What's New in Version 2.0?
+GSX Profile Manager has been completely overhauled to provide a more streamlined and user-friendly experience.
 
-GSX Profile Manager is now available in Version 1.0! This powerful tool makes managing and activating your GSX profiles easier than ever.
+# 🔥 Major Changes
+🔹 **Watch Folder Removed** – The app no longer monitors a folder for changes.
+🔹 **Simplified Storage** – Profiles are now stored in a local folder and managed in an internal SQLite database.
+🔹 **Enhanced Profile Management** – Files can be uploaded and enriched with metadata through an intuitive UI.
+🔹 **Autocomplete for ICAO Codes & Developers** – The app now suggests ICAO codes and developers based on stored database entries.
+🔹 **Efficient Synchronization** – Profiles are synced to the GSX profile folder using symlinks, eliminating duplicate file storage.
+🔹 **Admin Mode Check on Startup** – Ensures the app is running with the necessary permissions for symlink creation.
 
-![Logo](https://github.com/grtn91/gsx-profile-manager/blob/master/public/gsxman.png)
+# ⚠️ Important Notice for Users Upgrading from Version 1
+If you have previously used **Version 1** and are now installing **Version 2**, be sure to select the option to **flush the app data directory** (if available). This ensures a clean installation and prevents conflicts with old configurations.
+For future updates beyond Version 2, this step will not be necessary or recommended.
 
-## ⚠️ Version 1.0.1 – First Stable Release!
+# 🔍 Key Features
+✅ **Easy File Upload** – Add and manage your GSX profiles effortlessly.
+✅ **Metadata Support** – Assign and edit metadata (e.g., airport ICAO, developer) for better organization.
+✅ **Smart Autocomplete** – ICAO codes and developer names auto-fill based on existing data.
+✅ **Seamless Syncing** – Use symlinks to avoid duplicate file storage while keeping profiles accessible.
+✅ **Admin Mode Detection** – The app prompts for admin mode on startup to ensure symlink functionality.
 
-🚧 This is the first stable version! 🚧
+# 🛠️ How to Use
+1. **Download & Install** – Get the latest version and install the application.
+2. **Launch the App** – Open GSX Profile Manager (run as admin if prompted).
+3. **Upload Profiles** – Add GSX profiles via the UI and assign metadata.
+4. **Activate a Profile** – Sync profiles to the GSX Virtuali folder using symlinks.
+5. **Done! 🎉** Your GSX profile is now active without unnecessary file duplication.
 
-Core functionality is fully implemented.
+# 💡 Future Improvements
+🔹 **Drag & Drop Support** – Easily add profiles by dragging them into the app.
+🔹 **Community Folder Detection** – Automatically locate GSX profiles in the MSFS Community folder.
+🔹 **Expanded Profile Management** – Improved sorting and filtering options for better usability.
 
-Improved file selection view – The display of selected files has been optimized.
-
-Enhanced logic – All existing files in the GSX Virtuali folder are kept, all symlinks are removed, and the new profile is applied.
-
-Backup prompt – You’ll now be asked to back up your profiles before syncing to prevent data loss.
-
-## 🔍 Key Features
-
-✅ Folder Watching – Add a folder, and the app will automatically detect all GSX profiles (*.ini, *.py).
-
-✅ Easy File Selection – Browse, select, and highlight profile files effortlessly.
-
-✅ One-Click Activation – Instantly create symlinks to the Virtuali GSX Profile folder.
-
-✅ Intuitive Folder Navigation – Expand, collapse, and organize your profiles with ease.
-
-✅ Persistent User Sessions – Your settings are now saved across restarts.
-
-## 🛠️ How to Use
-
-Download the latest version.
-
-Install the application.
-
-Launch the tool and add your GSX profile storage location.
-
-The app will automatically detect all GSX Profile folders and display available profile files.
-
-Select a profile and click "Activate Profile" to create a symlink.
-
-Done! 🎉 Your GSX profile is now active.
-
-## ✅ Best Way to Use
-
-GSX Profile Manager works best when used alongside MSFS Addon Linker:
-
-Watch your scenery folder – Use the same folder you are watching in Addon Linker.
-
-Organize GSX Profiles:
-
-For each scenery, create a "GSX Profile" folder and place the profile files (*.ini, *.py) inside.
-
-If a scenery was installed via an external installer or the MSFS Marketplace, manually create a folder with the airport’s name (e.g., marketplace-dev-eddl) and add a GSX Profile subfolder inside.
-
-## 📂 Example Folder Structure
-```
-Sceneries/
-│── Europe/
-│   ├── Germany/
-│   │   ├── eddl-dus-intl/
-│   │   │   ├── GSX Profile/  ← Contains GSX profile files (`*.ini`, `*.py`)
-│   │   ├── eddf-frankfurt/
-│   │   │   ├── GSX Profile/  
-│   ├── France/
-│   │   ├── lfpg-charles-de-gaulle/
-│   │   │   ├── GSX Profile/  
-│── Asia/
-│   ├── China/
-│   │   ├── marketplace-dev-zbad/
-│   │   │   ├── GSX Profile/
-```
-
-## Screnshot
-![Screenshot](https://github.com/grtn91/gsx-profile-manager/blob/master/public/screen-2.png)
-
-## 🔧 Future Improvements
-
-I’m actively working on new features for upcoming versions:
-
-Expanded Profile Management:
-
-Folder Scan – Scan a specified folder for GSX profiles.
-
-Community Folder Detection – Automatically detect GSX profiles inside the MSFS Community folder.
-
-Drag & Drop Support – Users can drag & drop profiles into the app for quick selection.
-
-💖 Support the Project: I’m a solo developer working on this tool in my free time. If you’d like to support the project, any help is greatly appreciated! 🚀
+# 💖 Support the Project
+I'm a solo developer working on GSX Profile Manager in my free time. Any support is greatly appreciated! 🚀 - use this and make this a copiable *md file - dont change the content itself
