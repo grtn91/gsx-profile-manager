@@ -11,7 +11,7 @@ function App() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const localDev = false;
+  const localDev = true;
 
   useEffect(() => {
     // Check if the app is running with admin rights
@@ -76,15 +76,17 @@ function App() {
   }
 
   return (
-    <>
-      <Header />
-      <div className="bg-black-100">
+    <div className="flex flex-col h-screen">
+      <div className="sticky top-0 z-10 bg-background shadow-sm">
+        <Header />
+      </div>
+      <div className="flex-grow overflow-auto h-w-full">
         <div className="p-10">
           <GsxProfilesTable />
           <Toaster />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

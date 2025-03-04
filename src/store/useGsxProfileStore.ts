@@ -20,6 +20,7 @@ interface ProfileState {
     getAllProfiles: () => Promise<void>;
     getAllAirportIcaoCodes: () => string[];
     getAllAirportDevelopers: () => string[];
+    getAllCountries: () => string[];
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -194,6 +195,11 @@ export const useProfileStore = create<ProfileState>()(
                 const { profiles } = get();
                 return [...new Set(profiles.map(profile => profile.airportDeveloper).filter((dev): dev is string => dev !== undefined))];
             },
+
+            getAllCountries: () => {
+                const { profiles } = get();
+                return [...new Set(profiles.map(profile => profile.country).filter((country): country is string => country !== undefined))];
+            }
         }),
         {
             name: 'gsx-profile-storage',
