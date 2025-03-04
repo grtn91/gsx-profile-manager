@@ -12,6 +12,7 @@ import {
     CardDescription
 } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
 import { FileDropzone } from '@/components/ui/dropzone';
 import { FileList } from '@/components/ui/file-list';
 import { ProfileForm } from '@/components/ui/profile-form';
@@ -20,22 +21,33 @@ import { LocationOption, ProfileFormValues, formSchema } from '@/types/common';
 import { saveFilesToNestedPath } from '../utils/saveFilesToNestedPath';
 import { useProfileStore } from '@/store/useGsxProfileStore';
 import { GSXProfile } from '@/types/gsx-profile';
+import { getRelativePath } from '@/features/profile-table/utils/helper';
+import { X } from 'lucide-react';
 
 interface ProfileUploaderProps {
     onSuccess?: () => void;
+    existingProfile?: GSXProfile;
 }
 
-export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess }) => {
+export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, existingProfile }) => {
     const [files, setFiles] = useState<File[]>([]);
     const [availableCountries, setAvailableCountries] = useState<LocationOption[]>([]);
     const [availableIcaoCodes, setAvailableIcaoCodes] = useState<LocationOption[]>([]);
+    const [existingFilesToKeep, setExistingFilesToKeep] = useState<string[]>(
+        existingProfile?.filePaths || []
+    );
 
-    const { addProfile } = useProfileStore();
+    const { addProfile, updateProfile } = useProfileStore();
 
-    // Initialize form
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: {
+        defaultValues: existingProfile ? {
+            continent: existingProfile.continent,
+            country: existingProfile.country,
+            airportIcaoCode: existingProfile.airportIcaoCode,
+            airportDeveloper: existingProfile.airportDeveloper || "",
+            profileVersion: existingProfile.profileVersion || ""
+        } : {
             continent: "",
             country: "",
             airportIcaoCode: "",
@@ -43,6 +55,24 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess }) =
             profileVersion: ""
         },
     });
+
+    // If editing, populate the dropdown options based on the existing profile
+    useEffect(() => {
+        if (existingProfile) {
+            // Populate countries dropdown for the selected continent
+            if (existingProfile.continent) {
+                setAvailableCountries(COUNTRIES[existingProfile.continent] || []);
+            }
+
+            // Populate ICAO codes dropdown for the selected country
+            if (existingProfile.country) {
+                setAvailableIcaoCodes(AIRPORT_ICAO_CODES[existingProfile.country] || []);
+            }
+
+            // Set the list of existing files
+            setExistingFilesToKeep(existingProfile.filePaths);
+        }
+    }, [existingProfile]);
 
     // Watch form values to update dependent selects
     const watchContinent = form.watch('continent');
@@ -56,19 +86,25 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess }) =
     useEffect(() => {
         if (watchContinent) {
             setAvailableCountries(COUNTRIES[watchContinent] || []);
-            form.setValue('country', '');
-            form.setValue('airportIcaoCode', '');
-            setAvailableIcaoCodes([]);
+            // Only reset country if different from existing profile
+            if (!existingProfile || watchContinent !== existingProfile.continent) {
+                form.setValue('country', '');
+                form.setValue('airportIcaoCode', '');
+                setAvailableIcaoCodes([]);
+            }
         }
-    }, [watchContinent, form]);
+    }, [watchContinent, form, existingProfile]);
 
     // Update available ICAO codes when country changes
     useEffect(() => {
         if (watchCountry) {
             setAvailableIcaoCodes(AIRPORT_ICAO_CODES[watchCountry] || []);
-            form.setValue('airportIcaoCode', '');
+            // Only reset ICAO if different from existing profile
+            if (!existingProfile || watchCountry !== existingProfile.country) {
+                form.setValue('airportIcaoCode', '');
+            }
         }
-    }, [watchCountry, form]);
+    }, [watchCountry, form, existingProfile]);
 
     // Handle file drop - updated with duplicate checking
     const handleFilesAdded = useCallback(async (acceptedFiles: File[]) => {
@@ -99,52 +135,92 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess }) =
         }
     };
 
+    // Remove an existing file
+    const handleRemoveExistingFile = (filePath: string) => {
+        setExistingFilesToKeep(prev => prev.filter(path => path !== filePath));
+    };
+
     // Handle form submission
     const onSubmit = async (data: ProfileFormValues) => {
         try {
-            // Create a nested path structure
-            const baseDir = await appDataDir();
+            if (existingProfile) {
+                // Update existing profile
+                let updatedFilePaths = [...existingFilesToKeep];
 
-            const pathConfig = {
-                basePath: baseDir,
-                rootFolder: "gsx-profiles",
-                segments: [
-                    data.continent,
-                    data.country.toLowerCase(),
-                    data.airportIcaoCode.toLowerCase(),
-                    data.airportDeveloper?.trim() || undefined,
-                    data.profileVersion?.trim() || undefined
-                ]
-            };
+                if (files.length > 0) {
+                    const profileDir = await saveFilesToNestedPath(files, {
+                        basePath: await appDataDir(),
+                        rootFolder: "gsx-profiles",
+                        segments: [
+                            data.continent,
+                            data.country.toLowerCase(),
+                            data.airportIcaoCode.toLowerCase(),
+                            data.airportDeveloper?.trim() || undefined,
+                            data.profileVersion?.trim() || undefined
+                        ]
+                    });
 
-            const profileDir = await saveFilesToNestedPath(files, pathConfig);
+                    // Generate full file paths including filenames
+                    const newFilePaths = await Promise.all(
+                        files.map(async file => await path.join(profileDir, file.name))
+                    );
 
-            // Generate full file paths including filenames
-            const fullFilePaths = await Promise.all(
-                files.map(async file => await path.join(profileDir, file.name))
-            );
+                    // Combine existing and new file paths
+                    updatedFilePaths = [...existingFilesToKeep, ...newFilePaths];
+                }
 
-            const profileData: GSXProfile = {
-                ...data,
-                filePaths: fullFilePaths, // Store complete paths with filenames
-                id: crypto.randomUUID(), // Generate a unique ID for the profile
-                createdAt: new Date(),
-                status: false,
-                updatedAt: new Date()
-            };
+                await updateProfile(existingProfile.id, {
+                    ...existingProfile,
+                    ...data,
+                    filePaths: updatedFilePaths
+                });
 
+                toast.success("Profile updated successfully");
 
-            const data2 = await addProfile(profileData);
-            console.log("Saved profile data:", data2);
-            toast.success(`Profile saved to ${profileDir} !`);
+                // Call onSuccess to close modal if provided
+                if (onSuccess) {
+                    onSuccess();
+                }
+            } else {
+                // Create new profile logic (unchanged)
+                const baseDir = await appDataDir();
 
-            // Reset form and files
-            form.reset();
-            setFiles([]);
+                const pathConfig = {
+                    basePath: baseDir,
+                    rootFolder: "gsx-profiles",
+                    segments: [
+                        data.continent,
+                        data.country.toLowerCase(),
+                        data.airportIcaoCode.toLowerCase(),
+                        data.airportDeveloper?.trim() || undefined,
+                        data.profileVersion?.trim() || undefined
+                    ]
+                };
 
-            // Close the modal by calling the onSuccess callback
-            if (onSuccess) {
-                onSuccess();
+                const profileDir = await saveFilesToNestedPath(files, pathConfig);
+
+                const fullFilePaths = await Promise.all(
+                    files.map(async file => await path.join(profileDir, file.name))
+                );
+
+                const profileData: GSXProfile = {
+                    ...data,
+                    filePaths: fullFilePaths,
+                    id: crypto.randomUUID(),
+                    createdAt: new Date(),
+                    status: false,
+                    updatedAt: new Date()
+                };
+
+                await addProfile(profileData);
+                toast.success(`Profile saved successfully!`);
+
+                if (onSuccess) {
+                    onSuccess();
+                }
+
+                form.reset();
+                setFiles([]);
             }
         } catch (error) {
             console.error("Error saving profile:", error);
@@ -152,31 +228,81 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess }) =
         }
     };
 
+    // Check if we have files for the form validation
+    const hasAnyFiles = existingProfile
+        ? existingFilesToKeep.length > 0 || files.length > 0
+        : files.length > 0;
+
     return (
         <Card className="w-full mb-8">
             <CardHeader>
-                <CardTitle>Add GSX Profile</CardTitle>
+                <CardTitle>{existingProfile ? 'Update GSX Profile' : 'Add GSX Profile'}</CardTitle>
                 <CardDescription>
-                    Upload GSX profile files (.py and .ini) and provide profile details
+                    {existingProfile
+                        ? 'Edit profile details or add additional files'
+                        : 'Upload GSX profile files (.py and .ini) and provide profile details'}
                 </CardDescription>
             </CardHeader>
             <CardContent>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                        {/* File upload area */}
                         <FileDropzone onFilesAdded={handleFilesAdded} />
 
-                        <FileList
-                            files={files}
-                            onRemoveFile={handleRemoveFile}
-                        />
+                        {/* Show existing files with delete option when editing */}
+                        {existingProfile && existingFilesToKeep.length > 0 && (
+                            <div className="border rounded-md p-4">
+                                <h3 className="text-sm font-medium mb-2">Current Files:</h3>
+                                <div className="space-y-1">
+                                    {existingFilesToKeep.map((filePath, index) => (
+                                        <div
+                                            key={index}
+                                            className="flex items-center justify-between text-sm py-1 group"
+                                        >
+                                            <span className="text-muted-foreground">
+                                                {getRelativePath(filePath)}
+                                            </span>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleRemoveExistingFile(filePath)}
+                                                className="opacity-0 group-hover:opacity-100"
+                                            >
+                                                <X className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                                <span className="sr-only">Remove file</span>
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
+                        {/* New files list */}
+                        {files.length > 0 && (
+                            <FileList
+                                files={files}
+                                onRemoveFile={handleRemoveFile}
+                            />
+                        )}
+
+                        {/* Profile form */}
                         <ProfileForm
                             form={form}
                             continents={CONTINENTS}
                             countries={availableCountries}
                             icaoCodes={availableIcaoCodes}
-                            hasFiles={files.length > 0}
+                            hasFiles={hasAnyFiles}
                         />
+
+                        {/* Submit button */}
+                        <Button
+                            type="submit"
+                            disabled={!hasAnyFiles || form.formState.isSubmitting}
+                            className="w-full"
+                        >
+                            {existingProfile ? 'Update Profile' : 'Create Profile'}
+                        </Button>
                     </form>
                 </Form>
             </CardContent>

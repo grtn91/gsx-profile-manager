@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - feature/v2-build
 
 jobs:
   publish-tauri:
