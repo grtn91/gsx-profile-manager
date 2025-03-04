@@ -44,221 +44,253 @@ import { GSXProfile, SyncStatus } from "@/types/gsx-profile"
 import { getRelativePath } from "../utils/helper"
 import { dirname } from "@tauri-apps/api/path"
 import { open } from "@tauri-apps/plugin-shell";
-
-export const columns: ColumnDef<GSXProfile>[] = [
-  {
-    id: "sync",
-    header: "Sync",
-    cell: ({ row }) => {
-      const profile = row.original
-      const { syncProfile, unsyncProfile } = useProfileStore()
-
-      // Handle toggling sync status
-      const handleToggleSync = async (checked: boolean) => {
-        try {
-          if (checked) {
-            await syncProfile(profile.id)
-            toast.success(`${profile.airportIcaoCode} profile synced`)
-          } else {
-            await unsyncProfile(profile.id)
-            toast.success(`${profile.airportIcaoCode} profile unsynced`)
-          }
-        } catch (error) {
-          toast.error(`Failed to update profile status: ${error instanceof Error ? error.message : String(error)}`)
-        }
-      }
-
-      return (
-        <Checkbox
-          checked={profile.status}
-          onCheckedChange={handleToggleSync}
-          aria-label="Toggle sync status"
-        />
-      )
-    },
-    enableHiding: false,
-  },
-  {
-    accessorKey: "status",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Status
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
-    cell: ({ row }) => {
-      const status = row.original.status
-
-      return (
-        <Badge variant={status ? "default" : "outline"} className="capitalize">
-          {status ? SyncStatus.SYNCED : SyncStatus.NOT_SYNCED}
-        </Badge>
-      )
-    },
-  },
-  {
-    accessorKey: "continent",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Continent
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
-    cell: ({ row }) => <div className="capitalize">{row.getValue("continent")}</div>,
-  },
-  {
-    accessorKey: "country",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Country
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
-    cell: ({ row }) => <div className="capitalize">{row.getValue("country")}</div>,
-  },
-  {
-    accessorKey: "airportIcaoCode",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          ICAO Code
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
-    cell: ({ row }) => <div className="uppercase font-medium">{row.getValue("airportIcaoCode")}</div>,
-  },
-  {
-    accessorKey: "airportDeveloper",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Developer
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      )
-    },
-    cell: ({ row }) => {
-      const developer = row.getValue("airportDeveloper");
-      return <>{developer || "—"}</>;
-    },
-  },
-  {
-    accessorKey: "profileVersion",
-    header: "Version",
-    cell: ({ row }) => {
-      const version = row.getValue("profileVersion")
-      return <>{version || "—"}</>
-    },
-  },
-  {
-    accessorKey: "filePaths",
-    header: "Files",
-    cell: ({ row }) => {
-      const filePaths = row.getValue("filePaths") as string[]
-
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center">
-                <FileIcon className="h-4 w-4 mr-2" />
-                <span>{filePaths.length} file(s)</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" align="start" className="max-w-md">
-              <div className="space-y-1 text-xs">
-                {filePaths.map((path, index) => {
-                  const relativePath = getRelativePath(path);
-                  return (
-                    <div
-                      key={index}
-                      className="truncate hover:text-blue-500 cursor-pointer"
-                      onClick={async () => {
-                        try {
-                          // Get the directory name and open it
-                          const folderPath = await dirname(path);
-                          await open(folderPath);
-                        } catch (error) {
-                          toast.error(`Failed to open folder: ${error}`);
-                        }
-                      }}
-                    >
-                      {relativePath}
-                    </div>
-                  );
-                })}
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )
-    },
-  },
-  {
-    id: "actions",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const profile = row.original
-      const { removeProfile } = useProfileStore()
-
-      const handleDelete = async () => {
-        try {
-
-          await removeProfile(profile.id)
-          toast.success(`Profile for ${profile.airportIcaoCode} deleted successfully`)
-
-        } catch (error) {
-          toast.error(`Failed to delete profile: ${error instanceof Error ? error.message : String(error)}`)
-        }
-      }
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="flex h-8 w-8 p-0 items-center justify-center rounded-md hover:bg-accent cursor-pointer">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </div>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-              Delete profile
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    },
-  }
-]
+import { useState } from "react"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
+import ProfileUploader from "@/features/profile-uploader/components/profile-uploader"
 
 export function GsxProfilesTable() {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [profileToEdit, setProfileToEdit] = useState<GSXProfile | null>(null);
 
   const { profiles, initializeStore } = useProfileStore();
+
+  // Track which ICAO codes are currently synced/selected
+  const syncedIcaoCodes = React.useMemo(() => {
+    if (!profiles) return new Map<string, string>();
+
+    const syncedCodes = new Map<string, string>(); // Maps ICAO code to profile ID
+
+    profiles.forEach(profile => {
+      if (profile.status && profile.airportIcaoCode) {
+        syncedCodes.set(profile.airportIcaoCode, profile.id);
+      }
+    });
+
+    return syncedCodes;
+  }, [profiles]);
+
+  const columns: ColumnDef<GSXProfile>[] = [
+    {
+      id: "sync",
+      header: "Sync",
+      cell: ({ row }) => {
+        const profile = row.original;
+        const { syncProfile, unsyncProfile } = useProfileStore();
+
+        // Check if another profile with same ICAO code is already synced
+        const isConflicting = Boolean(
+          profile.airportIcaoCode &&
+          syncedIcaoCodes.has(profile.airportIcaoCode) &&
+          syncedIcaoCodes.get(profile.airportIcaoCode) !== profile.id
+        );
+
+        // Handle toggling sync status
+        const handleToggleSync = async (checked: boolean) => {
+          try {
+            if (checked) {
+              await syncProfile(profile.id);
+              toast.success(`${profile.airportIcaoCode} profile synced`);
+            } else {
+              await unsyncProfile(profile.id);
+              toast.success(`${profile.airportIcaoCode} profile unsynced`);
+            }
+          } catch (error) {
+            toast.error(`Failed to update profile status: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        };
+
+        return (
+          <Checkbox
+            checked={profile.status}
+            onCheckedChange={handleToggleSync}
+            disabled={isConflicting}
+            aria-label="Toggle sync status"
+          />
+        );
+      },
+      enableHiding: false,
+    },
+    {
+      accessorKey: "status",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Status
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const status = row.original.status
+
+        return (
+          <Badge variant={status ? "default" : "outline"} className="capitalize">
+            {status ? SyncStatus.SYNCED : SyncStatus.NOT_SYNCED}
+          </Badge>
+        )
+      },
+    },
+    {
+      accessorKey: "continent",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Continent
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => <div className="capitalize">{row.getValue("continent")}</div>,
+    },
+    {
+      accessorKey: "country",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Country
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => <div className="capitalize">{row.getValue("country")}</div>,
+    },
+    {
+      accessorKey: "airportIcaoCode",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            ICAO Code
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => <div className="uppercase font-medium">{row.getValue("airportIcaoCode")}</div>,
+    },
+    {
+      accessorKey: "airportDeveloper",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Developer
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+      cell: ({ row }) => {
+        const developer = row.getValue("airportDeveloper");
+        return <>{developer || "—"}</>;
+      },
+    },
+    {
+      accessorKey: "profileVersion",
+      header: "Version",
+      cell: ({ row }) => {
+        const version = row.getValue("profileVersion")
+        return <>{version || "—"}</>
+      },
+    },
+    {
+      accessorKey: "filePaths",
+      header: "Files",
+      cell: ({ row }) => {
+        const filePaths = row.getValue("filePaths") as string[]
+
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center">
+                  <FileIcon className="h-4 w-4 mr-2" />
+                  <span>{filePaths.length} file(s)</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="start" className="max-w-md">
+                <div className="space-y-1 text-xs">
+                  {filePaths.map((path, index) => {
+                    const relativePath = getRelativePath(path);
+                    return (
+                      <div
+                        key={index}
+                        className="truncate hover:text-blue-500 cursor-pointer"
+                        onClick={async () => {
+                          try {
+                            // Get the directory name and open it
+                            const folderPath = await dirname(path);
+                            await open(folderPath);
+                          } catch (error) {
+                            toast.error(`Failed to open folder: ${error}`);
+                          }
+                        }}
+                      >
+                        {relativePath}
+                      </div>
+                    );
+                  })}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )
+      },
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const profile = row.original
+        const { removeProfile } = useProfileStore()
+
+        const handleDelete = async () => {
+          try {
+            await removeProfile(profile.id)
+            toast.success(`Profile for ${profile.airportIcaoCode} deleted successfully`)
+          } catch (error) {
+            toast.error(`Failed to delete profile: ${error instanceof Error ? error.message : String(error)}`)
+          }
+        }
+
+        const handleUpdate = () => {
+          setProfileToEdit(profile);
+        }
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex h-8 w-8 p-0 items-center justify-center rounded-md hover:bg-accent cursor-pointer">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleUpdate}>
+                Update profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                Delete profile
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    }
+  ]
 
   // Initialize the store when the component mounts
   React.useEffect(() => {
@@ -291,7 +323,23 @@ export function GsxProfilesTable() {
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex items-center py-4"><>
+        {/* Edit Profile Dialog */}
+        <Dialog open={profileToEdit !== null} onOpenChange={(open) => !open && setProfileToEdit(null)}>
+          <DialogContent className="max-w-3xl">
+            <h2 className="text-xl font-bold mb-4">Update Profile</h2>
+            {profileToEdit && (
+              <ProfileUploader
+                existingProfile={profileToEdit}
+                onSuccess={() => {
+                  setProfileToEdit(null);
+                  toast.success(`Profile for ${profileToEdit.airportIcaoCode} updated successfully`);
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      </>
         <Input
           placeholder="Filter by ICAO code..."
           value={(table.getColumn("airportIcaoCode")?.getFilterValue() as string) ?? ""}
@@ -349,21 +397,32 @@ export function GsxProfilesTable() {
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.original.status && "selected"}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                // Check if this row has a conflicting ICAO code
+                const profile = row.original;
+                const isConflicting = Boolean(
+                  profile.airportIcaoCode &&
+                  syncedIcaoCodes.has(profile.airportIcaoCode) &&
+                  syncedIcaoCodes.get(profile.airportIcaoCode) !== profile.id
+                );
+
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.original.status ? "selected" : undefined}
+                    style={isConflicting ? { backgroundColor: 'rgba(254, 202, 202, 0.5)' } : undefined}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell
@@ -380,24 +439,6 @@ export function GsxProfilesTable() {
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
           {syncedCount} of {profiles?.length || 0} profile(s) synced.
-        </div>
-        <div className="hidden space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
         </div>
       </div>
     </div>

@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - master
-
-# This workflow builds GSX Profile Manager for Windows only
+      - feature/v2-build
 
 jobs:
   publish-tauri:
@@ -29,7 +28,8 @@ jobs:
       - name: Get pnpm store directory
         shell: bash
         run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          STORE_PATH=$(pnpm store path --silent)
+          echo "STORE_PATH=${STORE_PATH}" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
         uses: actions/cache@v3
