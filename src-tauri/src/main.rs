@@ -2,29 +2,30 @@
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
 )]
-
-mod modules;
-use modules::file_system;
-use modules::profile_manager;
-use modules::app_state;
+mod create_profile_symlink;
+mod db;
+use tauri_plugin_sql::Builder;
+mod is_admin;
 
 fn main() {
+    // Create a new Tauri application builder with default settings.
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
-            // File system operations
-            file_system::read_folder_contents, 
-            file_system::select_folder, 
-            file_system::check_folder_exists,
-            
-            // Profile management
-            profile_manager::activate_profiles,
-            
-            // App state operations
-            app_state::save_app_state,
-            app_state::load_app_state
+            create_profile_symlink::activate_profiles,
+            is_admin::is_admin,
+            is_admin::restart_as_admin,
         ])
+        .setup(|_app| {
+            // Initialize the database.
+            db::init();
+
+            Ok(())
+        })
         .run(tauri::generate_context!())
-        .expect("error while running Tauri application");
+        .expect("error while running tauri application");
 }
