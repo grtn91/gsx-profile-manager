@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import {
     FormField,
@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { LocationOption, ProfileFormValues } from '@/types/common';
+import { useProfileStore } from '@/store/useGsxProfileStore';
 
 interface ProfileFormProps {
     form: UseFormReturn<ProfileFormValues>;
@@ -30,11 +31,14 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     form,
     continents,
     countries,
-    icaoCodes,
     hasFiles
 }) => {
     const watchContinent = form.watch('continent');
     const watchCountry = form.watch('country');
+    const [commonDeveloper, setCommonDeveloper] = useState<string[] | null>(null);
+    const [airportIcaoCode, setAirportIcaoCode] = useState<string[] | null>(null);
+
+    const { getAllAirportIcaoCodes, getAllAirportDevelopers } = useProfileStore();
 
     const checkButtonDisabled = () => {
         if (!hasFiles) return true;
@@ -42,6 +46,12 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
         if (!watchCountry) return true;
         if (!form.getValues('airportIcaoCode')) return true;
     }
+
+    useEffect(() => {
+        setCommonDeveloper(getAllAirportDevelopers());
+        setAirportIcaoCode(getAllAirportIcaoCodes());
+    }, []);
+
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -104,7 +114,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                 )}
             />
 
-            {/* ICAO Code Select */}
+            {/* ICAO Code Input with Autocomplete */}
             <FormField
                 control={form.control}
                 name="airportIcaoCode"
@@ -112,22 +122,22 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                     <FormItem>
                         <FormLabel>ICAO Code</FormLabel>
                         <FormControl>
-                            <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                disabled={!watchCountry}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select ICAO code" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {icaoCodes.map(icao => (
-                                        <SelectItem key={icao.value} value={icao.value}>
-                                            {icao.label}
-                                        </SelectItem>
+                            <div className="relative">
+                                <Input
+                                    list="icaoOptions"
+                                    placeholder="e.g. KJFK"
+                                    {...field}
+                                    disabled={!watchCountry}
+                                    className="uppercase"
+                                />
+                                <datalist id="icaoOptions">
+                                    {airportIcaoCode?.map(icaoCode => (
+                                        <option key={icaoCode} value={icaoCode}>
+                                            {icaoCode}
+                                        </option>
                                     ))}
-                                </SelectContent>
-                            </Select>
+                                </datalist>
+                            </div>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -142,7 +152,18 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                     <FormItem>
                         <FormLabel>Airport Developer (optional)</FormLabel>
                         <FormControl>
-                            <Input placeholder="e.g. FlyTampa" {...field} />
+                            <div className="relative">
+                                <Input
+                                    list="developerOptions"
+                                    placeholder="e.g. FlyTampa"
+                                    {...field}
+                                />
+                                <datalist id="developerOptions">
+                                    {commonDeveloper?.map(dev => (
+                                        <option key={dev} value={dev} />
+                                    ))}
+                                </datalist>
+                            </div>
                         </FormControl>
                         <FormMessage />
                     </FormItem>

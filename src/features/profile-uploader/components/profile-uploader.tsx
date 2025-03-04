@@ -21,7 +21,11 @@ import { saveFilesToNestedPath } from '../utils/saveFilesToNestedPath';
 import { useProfileStore } from '@/store/useGsxProfileStore';
 import { GSXProfile } from '@/types/gsx-profile';
 
-export const ProfileUploader: React.FC = () => {
+interface ProfileUploaderProps {
+    onSuccess?: () => void;
+}
+
+export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess }) => {
     const [files, setFiles] = useState<File[]>([]);
     const [availableCountries, setAvailableCountries] = useState<LocationOption[]>([]);
     const [availableIcaoCodes, setAvailableIcaoCodes] = useState<LocationOption[]>([]);
@@ -133,6 +137,15 @@ export const ProfileUploader: React.FC = () => {
             const data2 = await addProfile(profileData);
             console.log("Saved profile data:", data2);
             toast.success(`Profile saved to ${profileDir} !`);
+
+            // Reset form and files
+            form.reset();
+            setFiles([]);
+
+            // Close the modal by calling the onSuccess callback
+            if (onSuccess) {
+                onSuccess();
+            }
         } catch (error) {
             console.error("Error saving profile:", error);
             toast.error(`Failed to save profile: ${error instanceof Error ? error.message : String(error)}`);

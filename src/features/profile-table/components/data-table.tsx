@@ -43,6 +43,9 @@ import {
 } from "@/components/ui/tooltip"
 import { useProfileStore } from "@/store/useGsxProfileStore"
 import { GSXProfile, SyncStatus } from "@/types/gsx-profile"
+import { getRelativePath } from "../utils/helper"
+import { dirname } from "@tauri-apps/api/path"
+import { open } from "@tauri-apps/plugin-shell";
 
 export const columns: ColumnDef<GSXProfile>[] = [
   {
@@ -178,11 +181,26 @@ export const columns: ColumnDef<GSXProfile>[] = [
             </TooltipTrigger>
             <TooltipContent side="bottom" align="start" className="max-w-md">
               <div className="space-y-1 text-xs">
-                {filePaths.map((path, index) => (
-                  <div key={index} className="truncate">
-                    {path}
-                  </div>
-                ))}
+                {filePaths.map((path, index) => {
+                  const relativePath = getRelativePath(path);
+                  return (
+                    <div
+                      key={index}
+                      className="truncate hover:text-blue-500 cursor-pointer"
+                      onClick={async () => {
+                        try {
+                          // Get the directory name and open it
+                          const folderPath = await dirname(path);
+                          await open(folderPath);
+                        } catch (error) {
+                          toast.error(`Failed to open folder: ${error}`);
+                        }
+                      }}
+                    >
+                      {relativePath}
+                    </div>
+                  );
+                })}
               </div>
             </TooltipContent>
           </Tooltip>

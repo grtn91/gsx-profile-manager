@@ -83,7 +83,7 @@ function Header() {
         <ButtonWithTooltip
           variant="ghost"
           tooltip={<a href="mailto:m.groten@yahoo.de">info@groten.cloud</a>}
-          icon={<Badge className="mr-4" variant="secondary">v1.0.3</Badge>}
+          icon={<Badge className="mr-4" variant="secondary">v2.0.0</Badge>}
         />
 
         {/* Support link */}
@@ -122,7 +122,7 @@ function Header() {
           <DialogHeader>
             <DialogTitle>Upload GSX Profile</DialogTitle>
           </DialogHeader>
-          <ProfileUploader />
+          <ProfileUploader onSuccess={() => setShowProfileUploader(false)} />
         </DialogContent>
       </Dialog>
     </header>

@@ -17,6 +17,9 @@ interface ProfileState {
     updateProfile: (id: string, data: Partial<GSXProfile>) => Promise<void>;
     getProfileById: (id: string) => GSXProfile | undefined;
     getSyncedProfiles: () => GSXProfile[];
+    getAllProfiles: () => Promise<void>;
+    getAllAirportIcaoCodes: () => string[];
+    getAllAirportDevelopers: () => string[];
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -180,6 +183,16 @@ export const useProfileStore = create<ProfileState>()(
             getSyncedProfiles: () => {
                 const { profiles } = get();
                 return profiles.filter(profile => profile.status === true);
+            },
+
+            getAllAirportIcaoCodes: () => {
+                const { profiles } = get();
+                return [...new Set(profiles.map(profile => profile.airportIcaoCode))];
+            },
+
+            getAllAirportDevelopers: () => {
+                const { profiles } = get();
+                return [...new Set(profiles.map(profile => profile.airportDeveloper).filter((dev): dev is string => dev !== undefined))];
             },
         }),
         {
