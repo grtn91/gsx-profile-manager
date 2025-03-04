@@ -1,7 +1,7 @@
 {
   "name": "gsx-profile-manager",
   "private": true,
-  "version": "2.0.1",
+  "version": "2.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -37,7 +37,7 @@
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.54.2",
-    "sonner": "^2.0.1",
+    "sonner": "^2.0.2",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.2",
