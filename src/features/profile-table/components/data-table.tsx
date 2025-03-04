@@ -21,8 +21,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -82,7 +80,17 @@ export const columns: ColumnDef<GSXProfile>[] = [
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      )
+    },
     cell: ({ row }) => {
       const status = row.original.status
 
@@ -106,7 +114,7 @@ export const columns: ColumnDef<GSXProfile>[] = [
         </Button>
       )
     },
-    cell: ({ row }) => <div>{row.getValue("continent")}</div>,
+    cell: ({ row }) => <div className="capitalize">{row.getValue("continent")}</div>,
   },
   {
     accessorKey: "country",
@@ -121,7 +129,7 @@ export const columns: ColumnDef<GSXProfile>[] = [
         </Button>
       )
     },
-    cell: ({ row }) => <div>{row.getValue("country")}</div>,
+    cell: ({ row }) => <div className="capitalize">{row.getValue("country")}</div>,
   },
   {
     accessorKey: "airportIcaoCode",
@@ -217,10 +225,10 @@ export const columns: ColumnDef<GSXProfile>[] = [
 
       const handleDelete = async () => {
         try {
-          if (window.confirm(`Are you sure you want to delete profile for ${profile.airportIcaoCode}?`)) {
-            await removeProfile(profile.id)
-            toast.success(`Profile for ${profile.airportIcaoCode} deleted successfully`)
-          }
+
+          await removeProfile(profile.id)
+          toast.success(`Profile for ${profile.airportIcaoCode} deleted successfully`)
+
         } catch (error) {
           toast.error(`Failed to delete profile: ${error instanceof Error ? error.message : String(error)}`)
         }
@@ -235,18 +243,6 @@ export const columns: ColumnDef<GSXProfile>[] = [
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => {
-                navigator.clipboard.writeText(profile.id)
-                toast.info("Profile ID copied to clipboard")
-              }}
-            >
-              Copy profile ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>View profile details</DropdownMenuItem>
-            <DropdownMenuItem>Edit profile</DropdownMenuItem>
             <DropdownMenuItem onClick={handleDelete} className="text-destructive">
               Delete profile
             </DropdownMenuItem>

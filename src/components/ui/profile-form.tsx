@@ -30,15 +30,15 @@ interface ProfileFormProps {
 export const ProfileForm: React.FC<ProfileFormProps> = ({
     form,
     continents,
-    countries,
     hasFiles
 }) => {
     const watchContinent = form.watch('continent');
     const watchCountry = form.watch('country');
     const [commonDeveloper, setCommonDeveloper] = useState<string[] | null>(null);
     const [airportIcaoCode, setAirportIcaoCode] = useState<string[] | null>(null);
+    const [countries, setCountries] = useState<string[] | null>(null);
 
-    const { getAllAirportIcaoCodes, getAllAirportDevelopers } = useProfileStore();
+    const { getAllAirportIcaoCodes, getAllAirportDevelopers, getAllCountries } = useProfileStore();
 
     const checkButtonDisabled = () => {
         if (!hasFiles) return true;
@@ -50,6 +50,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     useEffect(() => {
         setCommonDeveloper(getAllAirportDevelopers());
         setAirportIcaoCode(getAllAirportIcaoCodes());
+        setCountries(getAllCountries());
     }, []);
 
 
@@ -84,7 +85,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                 )}
             />
 
-            {/* Country Select */}
+            {/* Country Input with Autocomplete */}
             <FormField
                 control={form.control}
                 name="country"
@@ -92,22 +93,22 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                     <FormItem>
                         <FormLabel>Country</FormLabel>
                         <FormControl>
-                            <Select
-                                onValueChange={field.onChange}
-                                value={field.value}
-                                disabled={!watchContinent}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select country" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {countries.map(country => (
-                                        <SelectItem key={country.value} value={country.value}>
-                                            {country.label}
-                                        </SelectItem>
+                            <div className="relative">
+                                <Input
+                                    list="countryOptions"
+                                    placeholder="e.g. United States"
+                                    {...field}
+                                    disabled={!watchContinent}
+                                    autoComplete="off"
+                                />
+                                <datalist id="countryOptions">
+                                    {countries?.map(country => (
+                                        <option key={country} value={country}>
+                                            {country}
+                                        </option>
                                     ))}
-                                </SelectContent>
-                            </Select>
+                                </datalist>
+                            </div>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -129,6 +130,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                                     {...field}
                                     disabled={!watchCountry}
                                     className="uppercase"
+                                    autoComplete="off"
                                 />
                                 <datalist id="icaoOptions">
                                     {airportIcaoCode?.map(icaoCode => (
@@ -157,6 +159,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                                     list="developerOptions"
                                     placeholder="e.g. FlyTampa"
                                     {...field}
+                                    autoComplete="off"
                                 />
                                 <datalist id="developerOptions">
                                     {commonDeveloper?.map(dev => (
@@ -178,7 +181,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                     <FormItem>
                         <FormLabel>Profile Version (optional)</FormLabel>
                         <FormControl>
-                            <Input placeholder="e.g. 1.0.2" {...field} />
+                            <Input autoComplete="off" placeholder="e.g. 1.0.2" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>

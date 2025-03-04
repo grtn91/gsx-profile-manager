@@ -110,8 +110,8 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess }) =
                 rootFolder: "gsx-profiles",
                 segments: [
                     data.continent,
-                    data.country,
-                    data.airportIcaoCode,
+                    data.country.toLowerCase(),
+                    data.airportIcaoCode.toLowerCase(),
                     data.airportDeveloper?.trim() || undefined,
                     data.profileVersion?.trim() || undefined
                 ]
