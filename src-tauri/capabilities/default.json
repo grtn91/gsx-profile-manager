@@ -32,6 +32,17 @@
     "fs:allow-appdata-write-recursive",
     "shell:default",
     "shell:allow-open",
-    "store:default"
+    "store:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://*.flightsim.to"
+        },
+        {
+          "url": "https://*.github.com"
+        }
+      ]
+    }
   ]
 }

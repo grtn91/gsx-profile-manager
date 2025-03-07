@@ -68,3 +68,37 @@ jobs:
             - See commit history for details
           releaseDraft: false
           prerelease: false
+
+      - name: Generate latest.json
+        shell: bash
+        run: |
+          # Get version from package.json
+          VERSION=$(node -p "require('./package.json').version")
+          CURRENT_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # Read signature file
+          SIGNATURE=$(cat src-tauri/target/release/bundle/nsis/GSX\ Profile\ Manager_${VERSION}_x64-setup.exe.sig)
+          
+          # Create latest.json
+          echo '{
+            "version": "'$VERSION'",
+            "notes": "See the assets to download this version and install.",
+            "pub_date": "'$CURRENT_DATE'",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "'$SIGNATURE'",
+                "url": "https://github.com/grtn91/gsx-profile-manager/releases/download/v'$VERSION'/GSX%20Profile%20Manager_'$VERSION'_x64-setup.exe"
+              }
+            }
+          }' > latest.json
+          
+          # Print the content for verification in logs
+          cat latest.json
+        
+      - name: Upload latest.json to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: latest.json
+          tag_name: v${{ env.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

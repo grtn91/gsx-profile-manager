@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "GSX Profile Manager",
-  "version": "2.0.6",
+  "version": "2.1.0",
   "identifier": "com.gsx-profile-manager.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -32,7 +32,8 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "sql": {
@@ -45,20 +46,22 @@
       }
     },
     "updater": {
-      "active": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYwOUM3MEEzNUQ5RTlEClJXU2RubDJqY0p6d0FHZE1QZXovS1g1UjVVT1UvL09GNmU3UG1Lbld5YkEyYWQ3Y1VmTXVBSXE2Cg==",
       "endpoints": [
         "https://github.com/grtn91/gsx-profile-manager/releases/latest/download/latest.json"
       ],
-      "dialog": true,
-      "opener": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEYwOUM3MEEzNUQ5RTlEClJXU2RubDJqY0p6d0FHZE1QZXovS1g1UjVVT1UvL09GNmU3UG1Lbld5YkEyYWQ3Y1VmTXVBSXE2Cg==",
-      "allowlist": {
-        "path": {
-          "all": true
-        },
-        "fs": {
-          "all": true
-        }
+      "windows": {
+        "installMode": "passive"
+      }
+    },
+    "dialog": null,
+    "opener": null,
+    "allowlist": {
+      "path": {
+        "all": true
+      },
+      "fs": {
+        "all": true
       }
     }
   }
