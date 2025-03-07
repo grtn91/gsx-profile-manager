@@ -11,7 +11,7 @@ function App() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const localDev = true;
+  const localDev = import.meta.env.MODE === 'development';
 
   useEffect(() => {
     // Check if the app is running with admin rights

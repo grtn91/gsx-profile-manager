@@ -37,6 +37,7 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
         existingProfile?.filePaths || []
     );
 
+
     const { addProfile, updateProfile } = useProfileStore();
 
     const form = useForm<ProfileFormValues>({
@@ -56,6 +57,31 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
         },
     });
 
+    // More comprehensive button disabled check
+    const checkButtonDisabled = () => {
+        // Check for files
+        const hasFiles = existingProfile
+            ? existingFilesToKeep.length > 0 || files.length > 0
+            : files.length > 0;
+        if (!hasFiles) return true;
+
+        // Check required form fields
+        if (!watchContinent) return true;
+        if (!watchCountry) return true;
+        if (!watchIcaoCode) return true;
+
+        // Check for form submission in progress
+        if (form.formState.isSubmitting) return true;
+
+        // All checks passed, button should be enabled
+        return false;
+    };
+
+    // Watch form values for validation
+    const watchContinent = form.watch('continent');
+    const watchCountry = form.watch('country');
+    const watchIcaoCode = form.watch('airportIcaoCode');
+
     // If editing, populate the dropdown options based on the existing profile
     useEffect(() => {
         if (existingProfile) {
@@ -73,10 +99,6 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
             setExistingFilesToKeep(existingProfile.filePaths);
         }
     }, [existingProfile]);
-
-    // Watch form values to update dependent selects
-    const watchContinent = form.watch('continent');
-    const watchCountry = form.watch('country');
 
     const isDuplicateFile = (newFile: File, existingFiles: File[]): boolean => {
         return existingFiles.some(existingFile => existingFile.name === newFile.name);
@@ -298,7 +320,7 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
                         {/* Submit button */}
                         <Button
                             type="submit"
-                            disabled={!hasAnyFiles || form.formState.isSubmitting}
+                            disabled={checkButtonDisabled()}
                             className="w-full"
                         >
                             {existingProfile ? 'Update Profile' : 'Create Profile'}

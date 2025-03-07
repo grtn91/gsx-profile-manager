@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { GSXProfile } from '@/types/gsx-profile';
 import { initializeDb, addProfile, updateProfile, deleteProfile, updateProfileStatus, getAllProfiles, closeDb } from '@/lib/db';
+import { deleteProfileFiles } from '@/lib/fileSystem';
 
 interface ProfileState {
     profiles: GSXProfile[];
@@ -86,7 +87,7 @@ export const useProfileStore = create<ProfileState>()(
                     await deleteProfile(id);
 
                     // Then delete physical files if needed
-                    // await deleteProfileFiles(id);
+                    deleteProfileFiles(id);
 
                     // Then update the store
                     set(state => ({
