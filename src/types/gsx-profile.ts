@@ -9,6 +9,7 @@ export interface GSXProfile {
     airportDeveloper?: string | undefined,
     profileVersion?: string | undefined,
     additionalInfo?: string | undefined,
+    fstoLink?: string | undefined,
     filePaths: string[],
     createdAt: Date;
     updatedAt: Date;

@@ -18,10 +18,10 @@ import { FileList } from '@/components/ui/file-list';
 import { ProfileForm } from '@/components/ui/profile-form';
 import { CONTINENTS, COUNTRIES, AIRPORT_ICAO_CODES } from '@/lib/constants';
 import { LocationOption, ProfileFormValues, formSchema } from '@/types/common';
-import { saveFilesToNestedPath } from '../utils/saveFilesToNestedPath';
+import { saveFilesToNestedPath } from '@/lib/fileSystem';
 import { useProfileStore } from '@/store/useGsxProfileStore';
 import { GSXProfile } from '@/types/gsx-profile';
-import { getRelativePath } from '@/features/profile-table/utils/helper';
+import { getRelativePath } from '@/lib/utils';
 import { X } from 'lucide-react';
 
 interface ProfileUploaderProps {
@@ -47,13 +47,15 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
             country: existingProfile.country,
             airportIcaoCode: existingProfile.airportIcaoCode,
             airportDeveloper: existingProfile.airportDeveloper || "",
-            profileVersion: existingProfile.profileVersion || ""
+            profileVersion: existingProfile.profileVersion || "",
+            fstoLink: existingProfile.fstoLink || "",
         } : {
             continent: "",
             country: "",
             airportIcaoCode: "",
             airportDeveloper: "",
-            profileVersion: ""
+            profileVersion: "",
+            fstoLink: "",
         },
     });
 
@@ -178,7 +180,7 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
                             data.country.toLowerCase(),
                             data.airportIcaoCode.toLowerCase(),
                             data.airportDeveloper?.trim() || undefined,
-                            data.profileVersion?.trim() || undefined
+                            data.profileVersion?.trim() || undefined,
                         ]
                     });
 

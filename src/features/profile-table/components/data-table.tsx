@@ -41,12 +41,13 @@ import {
 } from "@/components/ui/tooltip"
 import { useProfileStore } from "@/store/useGsxProfileStore"
 import { GSXProfile, SyncStatus } from "@/types/gsx-profile"
-import { getRelativePath } from "../utils/helper"
+import { getRelativePath } from "@/lib/utils"
 import { dirname } from "@tauri-apps/api/path"
 import { open } from "@tauri-apps/plugin-shell";
 import { useState } from "react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import ProfileUploader from "@/features/profile-uploader/components/profile-uploader"
+import { getFstoLinkById } from "@/lib/db"
 
 export function GsxProfilesTable() {
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -270,6 +271,24 @@ export function GsxProfilesTable() {
           setProfileToEdit(profile);
         }
 
+        const handleVisit = async () => {
+          try {
+            const link = await getFstoLinkById(profile.id);
+            console.log(link);
+            // Open the FSTO link in a new tab
+            if (link) {
+              open(link);
+            } else {
+              toast.error("FSTO link not found");
+            }
+            return link;
+          } catch (error) {
+            toast.error(`Failed to get FSTO link: ${error instanceof Error ? error.message : String(error)}`);
+            return null;
+          }
+        }
+
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -281,6 +300,9 @@ export function GsxProfilesTable() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleUpdate}>
                 Update profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleVisit}>
+                Visit FSTO link
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleDelete} className="text-destructive">
                 Delete profile
@@ -322,21 +344,28 @@ export function GsxProfilesTable() {
   }, [profiles]);
 
   return (
-    <div className="w-full">
+    <div className="min-w-fit">
       <div className="flex items-center py-4"><>
         {/* Edit Profile Dialog */}
         <Dialog open={profileToEdit !== null} onOpenChange={(open) => !open && setProfileToEdit(null)}>
-          <DialogContent className="max-w-3xl">
-            <h2 className="text-xl font-bold mb-4">Update Profile</h2>
-            {profileToEdit && (
-              <ProfileUploader
-                existingProfile={profileToEdit}
-                onSuccess={() => {
-                  setProfileToEdit(null);
-                  toast.success(`Profile for ${profileToEdit.airportIcaoCode} updated successfully`);
-                }}
-              />
-            )}
+          <DialogContent className="max-w-5xl w-full"> {/* Increased width to match Header dialog */}
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold">Update GSX Profile</DialogTitle>
+              <DialogDescription>
+                Edit profile details or manage attached files
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4"> {/* Added spacing for consistency */}
+              {profileToEdit && (
+                <ProfileUploader
+                  existingProfile={profileToEdit}
+                  onSuccess={() => {
+                    setProfileToEdit(null);
+                    toast.success(`Profile for ${profileToEdit.airportIcaoCode} updated successfully`);
+                  }}
+                />
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </>
