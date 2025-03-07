@@ -13,6 +13,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Add this step before the tauri-action step
+      - name: Extract version
+        id: package_version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Version: $VERSION"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -53,7 +62,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: v${{ env.VERSION }}
-          releaseName: "GSX Profile Manager v__VERSION__"
+          releaseName: "GSX Profile Manager v${{ env.VERSION }}"
           update: true
           releaseBody: |
             ## GSX Profile Manager v__VERSION__
