@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - feature/v2-build
 
 jobs:
   publish-tauri:
@@ -46,7 +45,7 @@ jobs:
         run: pnpm install
        
       - name: Synchronize versions
-        run: node scripts/sync-versions.js
+        run: node scripts/sync-versions.cjs
 
       - uses: tauri-apps/tauri-action@v0
         env:
