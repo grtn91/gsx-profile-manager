@@ -61,7 +61,7 @@ function Header() {
           onClick={() => setShowProfileUploader(true)}
         >
           <UploadCloud className="h-5 w-5" />
-          <span>Upload Profile</span>
+          <span>Store Profile</span>
         </Button>
         <Button
           variant="secondary"
