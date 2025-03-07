@@ -5,9 +5,11 @@ import { join } from '@tauri-apps/api/path';
 
 let db: Database | null = null;
 
+// Track database version to manage migrations
+const CURRENT_DB_VERSION = 2; // Increment when schema changes
+
 export async function initializeDb(): Promise<void> {
   try {
-
     // Get app data directory path
     const appDir = await appDataDir();
     // Join with .config/gsx_profiles.db
@@ -16,8 +18,29 @@ export async function initializeDb(): Promise<void> {
 
     db = await Database.load(`sqlite:${dbPath}`);
 
-    // Create tables if they don't exist
-    db.execute(`
+    // Create the version tracking table if it doesn't exist
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS db_version (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        version INTEGER NOT NULL
+      );
+    `);
+
+    // Get current version from DB (or initialize it)
+    let dbVersion = 1;
+    const versionResult = await db.select<{ version: number }[]>('SELECT version FROM db_version WHERE id = 1');
+
+    if (versionResult && versionResult.length > 0) {
+      dbVersion = versionResult[0].version;
+    } else {
+      // First time setup - initialize version
+      await db.execute('INSERT INTO db_version (id, version) VALUES (1, 1)');
+    }
+
+    console.log(`Current database version: ${dbVersion}, Latest version: ${CURRENT_DB_VERSION}`);
+
+    // Create base table if it doesn't exist (for new installations)
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS profiles (
         id TEXT PRIMARY KEY,
         continent TEXT NOT NULL,
@@ -32,10 +55,57 @@ export async function initializeDb(): Promise<void> {
       );
     `);
 
+    // Apply migrations as needed
+    if (dbVersion < CURRENT_DB_VERSION) {
+      await runMigrations(dbVersion);
+    }
+
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Failed to initialize database:', error);
     throw error;
+  }
+}
+
+/**
+ * Runs database migrations from the current version to the latest version
+ * @param currentVersion The current database version
+ */
+async function runMigrations(currentVersion: number): Promise<void> {
+  if (!db) return;
+
+  console.log(`Running migrations from version ${currentVersion} to ${CURRENT_DB_VERSION}`);
+
+  try {
+    // Migration 1 to 2: Add fstoLink column
+    if (currentVersion < 2) {
+      console.log('Applying migration v1 to v2: Adding fstoLink column');
+
+      // Check if the column already exists (for safety)
+      const tableInfo = await db.select<{ name: string }[]>(
+        "PRAGMA table_info(profiles)"
+      );
+
+      const columnExists = tableInfo.some(col => col.name === 'fstoLink');
+
+      if (!columnExists) {
+        await db.execute(`ALTER TABLE profiles ADD COLUMN fstoLink TEXT;`);
+        console.log('Added fstoLink column to profiles table');
+      } else {
+        console.log('fstoLink column already exists, skipping');
+      }
+    }
+
+    // Add more migrations here in the future
+    // if (currentVersion < 3) { ... }
+
+    // Update the database version
+    await db.execute('UPDATE db_version SET version = ? WHERE id = 1', [CURRENT_DB_VERSION]);
+    console.log(`Database updated to version ${CURRENT_DB_VERSION}`);
+
+  } catch (error) {
+    console.error('Migration failed:', error);
+    throw new Error(`Database migration failed: ${error}`);
   }
 }
 
@@ -45,6 +115,22 @@ export async function closeDb(): Promise<void> {
     db = null;
     console.log('Database connection closed');
   }
+}
+
+export async function getFstoLinkById(id: string): Promise<string | null> {
+  if (!db) {
+    console.error('Database not initialized');
+    return null;
+  }
+  // Query the database to get the fstoLink for the given id
+  const result = await db.select<{ fstoLink: string }[]>(
+    'SELECT fstoLink FROM profiles WHERE id = ?',
+    [id]
+  );
+  if (result && result.length > 0) {
+    return result[0].fstoLink;
+  }
+  return null;
 }
 
 
@@ -60,8 +146,8 @@ export async function addProfile(profile: GSXProfile): Promise<GSXProfile> {
     await db.execute(
       `INSERT INTO profiles (
         id, continent, country, airportIcaoCode, airportDeveloper, 
-        profileVersion, filePaths, status, createdAt, updatedAt
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        profileVersion, filePaths, status, createdAt, updatedAt, fstoLink
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         profile.id,
         profile.continent,
@@ -72,7 +158,8 @@ export async function addProfile(profile: GSXProfile): Promise<GSXProfile> {
         filePathsJson,
         profile.status ? 1 : 0,
         profile.createdAt.toISOString(),
-        profile.updatedAt.toISOString()
+        profile.updatedAt.toISOString(),
+        profile.fstoLink || null,
       ]
     );
 
@@ -119,19 +206,6 @@ export async function getProfileById(id: string): Promise<GSXProfile | null> {
   try {
     if (!db) await initializeDb();
     if (!db) throw new Error('Database not initialized');
-
-    interface ProfileRow {
-      id: string;
-      continent: string;
-      country: string;
-      airportIcaoCode: string;
-      airportDeveloper: string | null;
-      profileVersion: string | null;
-      filePaths: string;
-      status: number;
-      createdAt: string;
-      updatedAt: string;
-    }
 
     const result = await db.select<ProfileRow[]>(
       'SELECT * FROM profiles WHERE id = $1',
@@ -220,20 +294,6 @@ export async function getAllProfiles(): Promise<GSXProfile[]> {
     if (!db) await initializeDb();
     if (!db) throw new Error('Database not initialized');
 
-    // Define the interface for a single row
-    interface ProfileRow {
-      id: string;
-      continent: string;
-      country: string;
-      airportIcaoCode: string;
-      airportDeveloper: string | null;
-      profileVersion: string | null;
-      filePaths: string;
-      status: number;
-      createdAt: string;
-      updatedAt: string;
-    }
-
     // Get the result directly
     const result = await db.select<ProfileRow[]>('SELECT * FROM profiles');
     console.log("Database query result:", result);
@@ -267,19 +327,6 @@ export async function searchProfiles(criteria: Partial<GSXProfile>): Promise<GSX
   try {
     if (!db) await initializeDb();
     if (!db) throw new Error('Database not initialized');
-
-    interface ProfileRow {
-      id: string;
-      continent: string;
-      country: string;
-      airportIcaoCode: string;
-      airportDeveloper: string | null;
-      profileVersion: string | null;
-      filePaths: string;
-      status: number;
-      createdAt: string;
-      updatedAt: string;
-    }
 
     // Build WHERE clause based on criteria
     const conditions: string[] = [];

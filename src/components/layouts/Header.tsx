@@ -8,12 +8,15 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import ProfileUploader from "@/features/profile-uploader/components/profile-uploader";
 import { DialogDescription } from "@radix-ui/react-dialog";
 import { useProfileStore } from "@/store/useGsxProfileStore";
 import { toast } from "sonner";
 import { invoke } from "@tauri-apps/api/core";
+import packageJson from "@/../package.json";
 
 function Header() {
   // State to control the visibility of the profile uploader modal
@@ -78,7 +81,7 @@ function Header() {
       {/* Navigation on the right */}
       <nav>
         {/* Version badge - Use a div wrapper instead of asChild */}
-        <Badge className="mr-4" variant="outline">v2.0.4</Badge>
+        <Badge className="mr-4" variant="outline">v{packageJson.version}</Badge>
 
         {/* Support link */}
         <a
@@ -113,6 +116,11 @@ function Header() {
       <Dialog open={showProfileUploader} onOpenChange={setShowProfileUploader}>
         <DialogContent className="min-w-fit">
           <DialogDescription />
+          <div className="hidden">
+            <DialogHeader>
+              <DialogTitle>Upload GSX Profile</DialogTitle>
+            </DialogHeader>
+          </div>
           <ProfileUploader onSuccess={() => setShowProfileUploader(false)} />
         </DialogContent>
       </Dialog>

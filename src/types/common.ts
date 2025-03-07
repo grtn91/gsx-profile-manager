@@ -15,6 +15,7 @@ export const formSchema = z.object({
     }),
     airportDeveloper: z.string().optional(),
     profileVersion: z.string().optional(),
+    fstoLink: z.string().optional(),
 });
 
 // Database interface

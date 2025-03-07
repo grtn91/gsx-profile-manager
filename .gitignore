@@ -13,6 +13,12 @@ dist-ssr
 *.local
 /src-tauri/target
 
+# Keys
+.env
+*.pem
+*.key
+secrets/
+
 # Lock files
 package-lock.json
 pnpm-lock.yaml

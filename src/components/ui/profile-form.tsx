@@ -179,6 +179,21 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                     </FormItem>
                 )}
             />
+
+            {/* Profile Version Input */}
+            <FormField
+                control={form.control}
+                name="fstoLink"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>flightsim.to Link (optional)</FormLabel>
+                        <FormControl>
+                            <Input autoComplete="off" placeholder="flightsim.to" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
         </div>
     );
 };
