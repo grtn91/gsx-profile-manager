@@ -78,7 +78,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen">
-      <UpdateChecker />
+      {localDev && <UpdateChecker />}
       <div className="sticky top-0 z-10 bg-background shadow-sm">
         <Header />
       </div>

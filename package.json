@@ -1,7 +1,7 @@
 {
   "name": "gsx-profile-manager",
   "private": true,
-  "version": "2.0.6",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -29,6 +29,7 @@
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-dialog": "~2.2.0",
     "@tauri-apps/plugin-fs": "~2",
+    "@tauri-apps/plugin-http": "~2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-process": "~2",
     "@tauri-apps/plugin-shell": "~2",

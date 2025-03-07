@@ -13,75 +13,104 @@ export default function UpdateChecker() {
     const [progress, setProgress] = useState(0);
     const [downloadComplete, setDownloadComplete] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [updateObject, setUpdateObject] = useState<any>(null);
 
     const checkForUpdates = async () => {
         setChecking(true);
         setError(null);
 
         try {
-            const update = await check();
+            console.log("Checking for updates...");
+            const update = await check({
+                timeout: 10000,
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'GSX-Profile-Manager',
+                }
+            });
+            console.log("Update check result:", update);
+
             if (update) {
+                // Store the full update object for later use
+                setUpdateObject(update);
+
+                // Extract version and notes, handling object/string type issues
+                const version = String(update.version || "Unknown");
+
+                // Handle the body content which might be an object
+                let bodyContent = "";
+                if (update.body) {
+                    if (typeof update.body === 'string') {
+                        bodyContent = update.body;
+                    } else {
+                        try {
+                            bodyContent = JSON.stringify(update.body, null, 2);
+                        } catch (e) {
+                            bodyContent = "Release notes available. Please see GitHub for details.";
+                        }
+                    }
+                }
+
                 setUpdateAvailable({
-                    version: update.version,
-                    body: update.body ?? ""
+                    version,
+                    body: bodyContent
                 });
             } else {
                 setUpdateAvailable(null);
             }
         } catch (err) {
             console.error("Failed to check for updates:", err);
-            setError("Failed to check for updates. Please try again later.");
+            setError(`Update check failed: ${err instanceof Error ? err.message : String(err)}`);
         } finally {
             setChecking(false);
         }
     };
 
     useEffect(() => {
+        // Check for updates when component mounts
         checkForUpdates();
     }, []);
 
     const handleUpdate = async () => {
-        if (!updateAvailable) return;
+        if (!updateObject) return;
 
         setDownloading(true);
         setProgress(0);
         setError(null);
 
         try {
-            const update = await check();
-            if (!update) {
-                setError("Update no longer available");
-                setDownloading(false);
-                return;
-            }
-
             let downloaded = 0;
             let contentLength = 0;
 
-            await update.downloadAndInstall((event: any) => {
+            await updateObject.downloadAndInstall((event: any) => {
                 switch (event.event) {
                     case 'Started':
                         contentLength = event.data.contentLength;
+                        console.log(`Started downloading ${contentLength} bytes`);
                         break;
                     case 'Progress':
                         downloaded += event.data.chunkLength;
-                        const percentage = (downloaded / contentLength) * 100;
-                        setProgress(Math.round(percentage));
+                        const progressPercent = Math.round((downloaded / contentLength) * 100);
+                        setProgress(progressPercent);
+                        console.log(`Downloaded ${downloaded} of ${contentLength} bytes (${progressPercent}%)`);
                         break;
                     case 'Finished':
+                        console.log('Download finished');
+                        setProgress(100);
                         setDownloadComplete(true);
                         break;
                 }
             });
 
-            // Give the user a moment to see the "Complete" message before relaunch
+            console.log('Update installed');
+            // Give the user a moment to see the success message before relaunching
             setTimeout(async () => {
                 await relaunch();
             }, 2000);
 
         } catch (err) {
             console.error("Failed to download and install update:", err);
-            setError("Failed to download and install update. Please try again later.");
+            setError(`Update failed: ${err instanceof Error ? err.message : String(err)}`);
             setDownloading(false);
         }
     };
@@ -93,7 +122,6 @@ export default function UpdateChecker() {
 
     return (
         <Dialog open={!!(updateAvailable || checking || error)} onOpenChange={() => {
-            // Only allow closing if we're not in the middle of downloading
             if (!downloading) {
                 setUpdateAvailable(null);
                 setError(null);
@@ -168,7 +196,7 @@ export default function UpdateChecker() {
                                 className="bg-blue-600 hover:bg-blue-700"
                             >
                                 <Download className="mr-2 h-4 w-4" />
-                                Download and Install
+                                Download & Install
                             </Button>
                         </>
                     )}
