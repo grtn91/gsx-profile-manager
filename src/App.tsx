@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { Button } from "./components/ui/button";
 import { ShieldAlert } from "lucide-react";
 import UpdateChecker from "./components/layouts/UpdateChecker";
+import { getUserProfile } from "./lib/db";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -78,7 +79,6 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen">
-      {!localDev && <UpdateChecker />}
       <div className="sticky top-0 z-10 bg-background shadow-sm">
         <Header />
       </div>
