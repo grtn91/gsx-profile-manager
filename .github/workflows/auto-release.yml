@@ -44,13 +44,19 @@ jobs:
 
       - name: Install frontend dependencies
         run: pnpm install
+       
+      - name: Synchronize versions
+        run: node scripts/sync-versions.js
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
           releaseName: "GSX Profile Manager v__VERSION__"
+          update: true
           releaseBody: |
             ## GSX Profile Manager v__VERSION__
             
@@ -61,5 +67,5 @@ jobs:
             
             ### Changes in this version
             - See commit history for details
-          releaseDraft: true
-          prerelease: true
+          releaseDraft: false
+          prerelease: false

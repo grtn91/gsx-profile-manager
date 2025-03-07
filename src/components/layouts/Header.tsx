@@ -16,6 +16,7 @@ import { DialogDescription } from "@radix-ui/react-dialog";
 import { useProfileStore } from "@/store/useGsxProfileStore";
 import { toast } from "sonner";
 import { invoke } from "@tauri-apps/api/core";
+import packageJson from "@/../package.json";
 
 function Header() {
   // State to control the visibility of the profile uploader modal
@@ -80,7 +81,7 @@ function Header() {
       {/* Navigation on the right */}
       <nav>
         {/* Version badge - Use a div wrapper instead of asChild */}
-        <Badge className="mr-4" variant="outline">v2.0.5</Badge>
+        <Badge className="mr-4" variant="outline">v{packageJson.version}</Badge>
 
         {/* Support link */}
         <a

@@ -1,6 +1,6 @@
 [package]
 name = "gsx-profile-manager"
-version = "2.0.5"
+version = "2.0.6"
 description = "A Manager to manage GSX Profiles"
 authors = ["grtn"]
 edition = "2021"
@@ -29,7 +29,11 @@ tauri-plugin-fs = "2"
 tauri-plugin-store = "2"
 chrono = "0.4.40"
 tauri-plugin-shell = "2"
+tauri-plugin-process = "2"
 
 [[bin]]
 name = "gsx-profile-manager" 
 path = "src/main.rs"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
