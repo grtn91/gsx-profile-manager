@@ -5,8 +5,6 @@ on:
     branches:
       - master
 
-# This workflow builds GSX Profile Manager for Windows only
-
 jobs:
   publish-tauri:
     permissions:
@@ -14,6 +12,15 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Add this step before the tauri-action step
+      - name: Extract version
+        id: package_version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Version: $VERSION"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -29,7 +36,8 @@ jobs:
       - name: Get pnpm store directory
         shell: bash
         run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          STORE_PATH=$(pnpm store path --silent)
+          echo "STORE_PATH=${STORE_PATH}" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
         uses: actions/cache@v3
@@ -44,13 +52,18 @@ jobs:
 
       - name: Install frontend dependencies
         run: pnpm install
+       
+      - name: Synchronize versions
+        run: node scripts/sync-version.cjs
 
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
-          tagName: v__VERSION__
-          releaseName: "GSX Profile Manager v__VERSION__"
+          tagName: v${{ env.VERSION }}
+          releaseName: "GSX Profile Manager v${{ env.VERSION }}"
+          update: true
           releaseBody: |
             ## GSX Profile Manager v__VERSION__
             
@@ -61,5 +74,49 @@ jobs:
             
             ### Changes in this version
             - See commit history for details
-          releaseDraft: true
-          prerelease: true
+          releaseDraft: false
+          prerelease: false
+
+      - name: Generate latest.json
+        shell: bash
+        run: |
+          # Use the VERSION we already set
+          echo "Using version: ${VERSION}"
+          CURRENT_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # Debug file existence
+          echo "Checking installer files:"
+          ls -la src-tauri/target/release/bundle/nsis/
+          
+          # Make sure to escape spaces in the filename correctly
+          SIG_FILE="src-tauri/target/release/bundle/nsis/GSX Profile Manager_${VERSION}_x64-setup.exe.sig"
+          echo "Looking for signature file: ${SIG_FILE}"
+          
+          if [ -f "$SIG_FILE" ]; then
+            SIGNATURE=$(cat "$SIG_FILE")
+            echo "Found signature file"
+          else
+            echo "Signature file not found!"
+            exit 1
+          fi
+          
+          # Create latest.json
+          echo '{
+            "version": "'$VERSION'",
+            "notes": "See the assets to download this version and install.",
+            "pub_date": "'$CURRENT_DATE'",
+            "platforms": {
+              "windows-x86_64": {
+                "signature": "'$SIGNATURE'",
+                "url": "https://github.com/grtn91/gsx-profile-manager/releases/download/v'$VERSION'/GSX%20Profile%20Manager_'$VERSION'_x64-setup.exe"
+              }
+            }
+          }' > latest.json
+        
+      - name: Upload latest.json to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: latest.json
+          tag_name: v${{ env.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

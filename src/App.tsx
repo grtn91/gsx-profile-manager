@@ -1,51 +1,93 @@
-import { FolderView } from "./components/FolderView";
-import "./css/App.css";
+import { Toaster } from "sonner";
+import "./components/css/App.css"
+import Header from './components/layouts/Header';
+import { GsxProfilesTable } from './features/profile-table/components/data-table';
+import { invoke } from "@tauri-apps/api/core";
+import { useState, useEffect } from "react";
 import { Button } from "./components/ui/button";
-import { Settings, User } from "lucide-react";
-import { Badge, badgeVariants } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-import { useAppContext } from "./context/AppContext";
-import { Spinner } from "./components/ui/spinner";
+import { ShieldAlert } from "lucide-react";
+import UpdateChecker from "./components/layouts/UpdateChecker";
 
 function App() {
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
 
-    const {
-      isLoading
-    } 
-    = useAppContext();
-  
+  const localDev = import.meta.env.MODE === 'development';
+
+  useEffect(() => {
+    // Check if the app is running with admin rights
+    const checkAdminStatus = async () => {
+      if (localDev) {
+        setIsAdmin(true);
+        setLoading(false);
+        return;
+      }
+      try {
+        const hasAdminRights = await invoke<boolean>("is_admin");
+        setIsAdmin(hasAdminRights);
+      } catch (error) {
+        console.error("Failed to check admin status:", error);
+        // Default to true if we can't check to avoid blocking the app
+        setIsAdmin(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, []);
+
+  const handleRestartAsAdmin = async () => {
+    try {
+      await invoke("restart_as_admin");
+    } catch (error) {
+      console.error("Failed to restart as admin:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAdmin === false) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
+          <ShieldAlert className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold mb-4">Administrator Rights Required</h2>
+          <p className="text-gray-600 mb-6">
+            This application needs administrator permissions to create symbolic links for GSX profiles. Please restart the application as an administrator.
+          </p>
+          <Button
+            onClick={handleRestartAsAdmin}
+            className="w-full bg-blue-600 hover:bg-blue-700"
+          >
+            Restart as Administrator
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-    {isLoading ? (
-      <div className="container mx-auto h-dvh content-center">
-        <Spinner size="w-48 h-48"></Spinner>
+    <div className="flex flex-col h-screen">
+      {!localDev && <UpdateChecker />}
+      <div className="sticky top-0 z-10 bg-background shadow-sm">
+        <Header />
       </div>
-      ) : (
-      <main className="container mx-auto p-4">
-      <header className="flex flex-row justify-between">
-        <h1 className="text-3xl font-bold mb-4">
-          GSX Profile Manager
-        </h1>
-        <nav>
-          <Badge className="mr-2.5" variant="secondary">v.0.0.1-alpha.3</Badge>
-          <a href="https://www.paypal.com/donate/?hosted_button_id=TSPHNJJ58GEGN" target="_blank" className={cn(
-          badgeVariants({ variant: "default" }),
-          "mr-2.5")}>Support me</a>
-          <Button variant="ghost" size="icon" className="h-9 w-9 mr-2">
-            <Settings className="h-5 w-5" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <User className="h-5 w-5" />
-          </Button>
-        </nav>
-      </header>
-      <div className="container">
-        <FolderView />
+      <div className="flex-grow overflow-auto h-w-full">
+        <div className="p-10">
+          <GsxProfilesTable />
+          <Toaster />
+        </div>
       </div>
-      </main>
-      )
-    }
     </div>
   );
 }

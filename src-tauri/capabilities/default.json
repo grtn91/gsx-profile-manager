@@ -9,6 +9,40 @@
     "core:default",
     "opener:default",
     "dialog:default",
-    "store:default"
+    "sql:default",
+    "sql:allow-execute",
+    "sql:allow-load",
+    "sql:allow-select",
+    "fs:allow-open",
+    "fs:read-files",
+    "fs:allow-read-file",
+    "fs:allow-home-read",
+    "fs:allow-home-read-recursive",
+    "fs:allow-document-read",
+    "fs:allow-document-read-recursive",
+    "fs:allow-download-read",
+    "fs:allow-download-read-recursive",
+    "fs:allow-create",
+    "fs:allow-write-text-file",
+    "fs:allow-remove",
+    "fs:allow-mkdir",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-write-recursive",
+    "shell:default",
+    "shell:allow-open",
+    "store:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://*.flightsim.to"
+        },
+        {
+          "url": "https://*.github.com"
+        }
+      ]
+    }
   ]
 }
