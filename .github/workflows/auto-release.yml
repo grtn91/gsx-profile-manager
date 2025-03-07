@@ -19,6 +19,7 @@ jobs:
           node-version: lts/*
 
       - name: Debug environment
+        shell: bash  # Add this line to explicitly use bash
         run: |
           echo "Checking environment variables..."
           if [[ -n "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
