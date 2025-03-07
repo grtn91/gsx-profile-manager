@@ -40,12 +40,6 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
     const { getAllAirportIcaoCodes, getAllAirportDevelopers, getAllCountries } = useProfileStore();
 
-    const checkButtonDisabled = () => {
-        if (!hasFiles) return true;
-        if (!watchContinent) return true;
-        if (!watchCountry) return true;
-        if (!form.getValues('airportIcaoCode')) return true;
-    }
 
     useEffect(() => {
         setCommonDeveloper(getAllAirportDevelopers());
@@ -187,13 +181,6 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                     </FormItem>
                 )}
             />
-
-            <div>
-                <h2 className="text-sm font-medium mb-1.5">Add Profile</h2>
-                <Button type="submit" className="w-full" disabled={checkButtonDisabled()}>
-                    Add Profile
-                </Button>
-            </div>
         </div>
     );
 };
