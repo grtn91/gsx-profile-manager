@@ -24,6 +24,6 @@ export interface File {
 export type ProfileFormData = Omit<GSXProfile, 'id' | 'status' | 'createdAt' | 'updatedAt'>;
 
 export enum SyncStatus {
-    SYNCED = 'Synced',
-    NOT_SYNCED = 'Not Synced'
+    SYNCED = 'Ready to link',
+    NOT_SYNCED = 'Not Selected'
 }

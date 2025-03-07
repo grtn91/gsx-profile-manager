@@ -438,7 +438,7 @@ export function GsxProfilesTable() {
       </div>
       <div className="flex items-center justify-end space-x-2 py-4">
         <div className="flex-1 text-sm text-muted-foreground">
-          {syncedCount} of {profiles?.length || 0} profile(s) synced.
+          {syncedCount} of {profiles?.length || 0} profile(s) selected for linking.
         </div>
       </div>
     </div>

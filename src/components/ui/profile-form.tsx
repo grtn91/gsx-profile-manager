@@ -15,7 +15,6 @@ import {
     SelectValue
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { LocationOption, ProfileFormValues } from '@/types/common';
 import { useProfileStore } from '@/store/useGsxProfileStore';
 
@@ -30,7 +29,6 @@ interface ProfileFormProps {
 export const ProfileForm: React.FC<ProfileFormProps> = ({
     form,
     continents,
-    hasFiles
 }) => {
     const watchContinent = form.watch('continent');
     const watchCountry = form.watch('country');
