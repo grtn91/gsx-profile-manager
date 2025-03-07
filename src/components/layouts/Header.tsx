@@ -1,4 +1,4 @@
-import { Settings, User, UploadCloud, Play } from "lucide-react";
+import { Settings, User, UploadCloud, Play, RefreshCcw, UserCog } from "lucide-react";
 import { Badge, badgeVariants } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import logoSvg from '@/assets/gsx-manager-logo.svg';
@@ -17,11 +17,21 @@ import { useProfileStore } from "@/store/useGsxProfileStore";
 import { toast } from "sonner";
 import { invoke } from "@tauri-apps/api/core";
 import packageJson from "@/../package.json";
+import { check } from '@tauri-apps/plugin-updater';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import UserSettings from "@/features/user-settings/components/user-settings";
 
 function Header() {
   // State to control the visibility of the profile uploader modal
   const [showProfileUploader, setShowProfileUploader] = useState(false);
+  const [showUserSettings, setShowUserSettings] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [checkingForUpdates, setCheckingForUpdates] = useState(false);
   const { getSyncedProfiles } = useProfileStore();
 
   const handleApplyProfiles = async () => {
@@ -47,6 +57,34 @@ function Header() {
       toast.error(`Failed to apply profiles: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsApplying(false);
+    }
+  };
+
+  const handleCheckForUpdates = async () => {
+    try {
+      setCheckingForUpdates(true);
+      toast.info("Checking for updates...");
+
+      const update = await check({
+        timeout: 10000,
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'GSX-Profile-Manager',
+        }
+      });
+
+      if (update) {
+        toast.success(`Update available: v${update.version}`, {
+          description: "The update dialog will appear shortly.",
+          duration: 5000
+        });
+      } else {
+        toast.success("You're using the latest version!");
+      }
+    } catch (error) {
+      toast.error(`Failed to check for updates: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setCheckingForUpdates(false);
     }
   };
 
@@ -93,14 +131,31 @@ function Header() {
           Support me
         </a>
 
-        {/* Settings button - Now using regular button without asChild */}
-        <ButtonWithTooltip
-          variant="outline"
-          className="h-9 w-9 mr-2"
-          disabled
-          tooltip="Coming soon"
-          icon={<Settings className="h-5 w-5" />}
-        />
+        {/* Settings button with dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <Button variant="outline" size={"icon"} className="h-9 w-9 mr-2">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              onClick={handleCheckForUpdates}
+              disabled={checkingForUpdates}
+              className="flex items-center gap-2"
+            >
+              <RefreshCcw className="h-4 w-4" />
+              <span>Check for Updates</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setShowUserSettings(true)}
+              className="flex items-center gap-2"
+            >
+              <UserCog className="h-4 w-4" />
+              <span>User Settings</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* User button - Now using regular button without asChild */}
         <ButtonWithTooltip
@@ -122,6 +177,19 @@ function Header() {
             </DialogHeader>
           </div>
           <ProfileUploader onSuccess={() => setShowProfileUploader(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* User Settings Modal */}
+      <Dialog open={showUserSettings} onOpenChange={setShowUserSettings}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>User Settings</DialogTitle>
+            <DialogDescription>
+              Set your simbrief
+            </DialogDescription>
+          </DialogHeader>
+          <UserSettings onClose={() => setShowUserSettings(false)} />
         </DialogContent>
       </Dialog>
     </header>

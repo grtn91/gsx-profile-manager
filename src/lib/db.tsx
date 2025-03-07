@@ -2,11 +2,12 @@ import { appDataDir } from '@tauri-apps/api/path';
 import { GSXProfile } from '@/types/gsx-profile';
 import Database from '@tauri-apps/plugin-sql';
 import { join } from '@tauri-apps/api/path';
+import { UserProfile } from '@/types/userProfile';
 
 let db: Database | null = null;
 
 // Track database version to manage migrations
-const CURRENT_DB_VERSION = 2; // Increment when schema changes
+const CURRENT_DB_VERSION = 3; // Increment when schema changes
 
 export async function initializeDb(): Promise<void> {
   try {
@@ -96,8 +97,34 @@ async function runMigrations(currentVersion: number): Promise<void> {
       }
     }
 
+    // Migration 2 to 3: Add user_profiles table
+    if (currentVersion < 3) {
+      console.log('Applying migration v2 to v3: Creating user_profiles table');
+
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS user_profiles (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          simbriefUsername TEXT,
+          skipUpdate INTEGER DEFAULT 0,
+          skipUpdateUntil TEXT, 
+          communityFolderAirports TEXT,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
+        );
+      `);
+
+      // Insert a default record
+      const now = new Date().toISOString();
+      await db.execute(`
+        INSERT INTO user_profiles (simbriefUsername, skipUpdate, communityFolderAirports, createdAt, updatedAt)
+        VALUES ('', 0, '[]', ?, ?);
+      `, [now, now]);
+
+      console.log('Created user_profiles table with default record');
+    }
+
     // Add more migrations here in the future
-    // if (currentVersion < 3) { ... }
+    // if (currentVersion < 4) { ... }
 
     // Update the database version
     await db.execute('UPDATE db_version SET version = ? WHERE id = 1', [CURRENT_DB_VERSION]);
@@ -363,4 +390,137 @@ export async function searchProfiles(criteria: Partial<GSXProfile>): Promise<GSX
     console.error('Failed to search profiles:', error);
     return [];
   }
+}
+
+export async function getUserProfile(): Promise<UserProfile | null> {
+  try {
+    if (!db) await initializeDb();
+    if (!db) throw new Error('Database not initialized');
+
+    // There should only be one record, so we'll get the first one
+    const result = await db.select<any[]>('SELECT * FROM user_profiles LIMIT 1');
+
+    if (!result || result.length === 0) {
+      // If no profile exists, create a default one
+      return await createDefaultUserProfile();
+    }
+
+    console.log("User profile query result:", result);
+
+    const profile = result[0];
+    return {
+      id: profile.id,
+      simbriefUsername: profile.simbriefUsername || '',
+      skipUpdate: Boolean(profile.skipUpdate),
+      skipUpdateUntil: profile.skipUpdateUntil ? new Date(profile.skipUpdateUntil) : null,
+      communityFolderAirports: JSON.parse(profile.communityFolderAirports || '[]'),
+      createdAt: new Date(profile.createdAt),
+      updatedAt: new Date(profile.updatedAt)
+    };
+  } catch (error) {
+    console.error('Failed to get user profile:', error);
+    return null;
+  }
+}
+
+export async function updateUserProfile(updates: Partial<UserProfile>): Promise<UserProfile | null> {
+  try {
+    if (!db) await initializeDb();
+    if (!db) throw new Error('Database not initialized');
+
+    // Get the current profile first
+    const currentProfile = await getUserProfile();
+    if (!currentProfile) {
+      throw new Error('No user profile found to update');
+    }
+
+    const updatedFields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    // Handle each updatable field
+    if ('simbriefUsername' in updates) {
+      updatedFields.push(`simbriefUsername = $${paramIndex++}`);
+      values.push(updates.simbriefUsername);
+    }
+
+    if ('skipUpdate' in updates) {
+      updatedFields.push(`skipUpdate = $${paramIndex++}`);
+      values.push(updates.skipUpdate ? 1 : 0);
+
+      // If skipUpdate is true, set skipUpdateUntil to 30 days from now
+      if (updates.skipUpdate) {
+        const thirtyDaysLater = new Date();
+        thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+
+        updatedFields.push(`skipUpdateUntil = $${paramIndex++}`);
+        values.push(thirtyDaysLater.toISOString());
+      } else {
+        updatedFields.push(`skipUpdateUntil = $${paramIndex++}`);
+        values.push(null);
+      }
+    }
+
+    if ('communityFolderAirports' in updates && updates.communityFolderAirports) {
+      updatedFields.push(`communityFolderAirports = $${paramIndex++}`);
+      values.push(JSON.stringify(updates.communityFolderAirports));
+    }
+
+    // Always update the updatedAt timestamp
+    updatedFields.push(`updatedAt = $${paramIndex++}`);
+    values.push(new Date().toISOString());
+
+    // Execute the update
+    const query = `UPDATE user_profiles SET ${updatedFields.join(', ')} WHERE id = $${paramIndex}`;
+    values.push(currentProfile.id);
+
+    await db.execute(query, values);
+
+    // Return the updated profile
+    return getUserProfile();
+  } catch (error) {
+    console.error('Failed to update user profile:', error);
+    return null;
+  }
+}
+
+async function createDefaultUserProfile(): Promise<UserProfile> {
+  if (!db) throw new Error('Database not initialized');
+
+  const now = new Date();
+  const defaultProfile: UserProfile = {
+    simbriefUsername: '',
+    skipUpdate: false,
+    skipUpdateUntil: null,
+    communityFolderAirports: [],
+    createdAt: now,
+    updatedAt: now
+  };
+
+  await db.execute(`
+    INSERT INTO user_profiles (
+      simbriefUsername, skipUpdate, skipUpdateUntil, communityFolderAirports, createdAt, updatedAt
+    ) VALUES ($1, $2, $3, $4, $5, $6)
+  `, [
+    defaultProfile.simbriefUsername,
+    defaultProfile.skipUpdate ? 1 : 0,
+    defaultProfile.skipUpdateUntil?.toISOString() || null,
+    JSON.stringify(defaultProfile.communityFolderAirports),
+    defaultProfile.createdAt.toISOString(),
+    defaultProfile.updatedAt.toISOString()
+  ]);
+
+  // Get the newly created profile
+  const result = await db.select<any[]>('SELECT * FROM user_profiles ORDER BY id DESC LIMIT 1');
+  const profile = result[0];
+
+  return {
+    id: profile.id,
+    simbriefUsername: profile.simbriefUsername,
+    skipUpdate: Boolean(profile.skipUpdate),
+    skipUpdateUntil: profile.skipUpdateUntil ? new Date(profile.skipUpdateUntil) : null,
+    communityFolderAirports: JSON.parse(profile.communityFolderAirports),
+    createdAt: new Date(profile.createdAt),
+    updatedAt: new Date(profile.updatedAt)
+  };
 }
