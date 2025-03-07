@@ -258,11 +258,11 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
     return (
         <Card className="w-full mb-8">
             <CardHeader>
-                <CardTitle>{existingProfile ? 'Update GSX Profile' : 'Add GSX Profile'}</CardTitle>
+                <CardTitle>{existingProfile ? 'Update GSX Profile' : 'Store GSX Profile'}</CardTitle>
                 <CardDescription>
                     {existingProfile
-                        ? 'Edit profile details or add additional files'
-                        : 'Upload GSX profile files (.py and .ini) and provide profile details'}
+                        ? 'Edit profile details or manage attached files (add/remove)'
+                        : 'Store GSX profile files (.py, .ini) and enter profile details'}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -323,7 +323,7 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
                             disabled={checkButtonDisabled()}
                             className="w-full"
                         >
-                            {existingProfile ? 'Update Profile' : 'Create Profile'}
+                            {existingProfile ? 'Update Profile' : 'Store Profile'}
                         </Button>
                     </form>
                 </Form>
