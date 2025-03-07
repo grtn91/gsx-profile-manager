@@ -55,7 +55,6 @@ jobs:
           tagName: v__VERSION__
           releaseName: "GSX Profile Manager v__VERSION__"
           update: true
-          args: --target nsis-x64
           releaseBody: |
             ## GSX Profile Manager v__VERSION__
             
