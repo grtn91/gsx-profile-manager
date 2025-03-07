@@ -52,7 +52,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
-          tagName: v__VERSION__
+          tagName: v${{ env.VERSION }}
           releaseName: "GSX Profile Manager v__VERSION__"
           update: true
           releaseBody: |
@@ -71,12 +71,25 @@ jobs:
       - name: Generate latest.json
         shell: bash
         run: |
-          # Get version from package.json
-          VERSION=$(node -p "require('./package.json').version")
+          # Use the VERSION we already set
+          echo "Using version: ${VERSION}"
           CURRENT_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
-          # Read signature file
-          SIGNATURE=$(cat src-tauri/target/release/bundle/nsis/GSX\ Profile\ Manager_${VERSION}_x64-setup.exe.sig)
+          # Debug file existence
+          echo "Checking installer files:"
+          ls -la src-tauri/target/release/bundle/nsis/
+          
+          # Make sure to escape spaces in the filename correctly
+          SIG_FILE="src-tauri/target/release/bundle/nsis/GSX Profile Manager_${VERSION}_x64-setup.exe.sig"
+          echo "Looking for signature file: ${SIG_FILE}"
+          
+          if [ -f "$SIG_FILE" ]; then
+            SIGNATURE=$(cat "$SIG_FILE")
+            echo "Found signature file"
+          else
+            echo "Signature file not found!"
+            exit 1
+          fi
           
           # Create latest.json
           echo '{
@@ -90,9 +103,6 @@ jobs:
               }
             }
           }' > latest.json
-          
-          # Print the content for verification in logs
-          cat latest.json
         
       - name: Upload latest.json to release
         uses: softprops/action-gh-release@v1
