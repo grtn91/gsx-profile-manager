@@ -18,6 +18,22 @@ jobs:
         with:
           node-version: lts/*
 
+      - name: Debug environment
+        run: |
+          echo "Checking environment variables..."
+          if [[ -n "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY is set"
+          else
+            echo "TAURI_SIGNING_PRIVATE_KEY is NOT set"
+          fi
+          if [[ -n "$TAURI_KEY_PASSWORD" ]]; then
+            echo "TAURI_KEY_PASSWORD is set"
+          else
+            echo "TAURI_KEY_PASSWORD is NOT set"
+          fi
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
