@@ -6,8 +6,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { useState, useEffect } from "react";
 import { Button } from "./components/ui/button";
 import { ShieldAlert } from "lucide-react";
-import UpdateChecker from "./components/layouts/UpdateChecker";
-import { getUserProfile } from "./lib/db";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);

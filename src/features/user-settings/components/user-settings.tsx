@@ -43,6 +43,8 @@ export default function UserSettings({ onClose }: UserSettingsProps) {
                 simbriefUsername
             });
 
+            console.log("User profile updated:", profile);
+
             toast.success("Settings saved successfully");
             onClose();
         } catch (error) {

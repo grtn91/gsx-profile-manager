@@ -4,7 +4,7 @@ import { relaunch } from '@tauri-apps/plugin-process';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Download, RefreshCw, CheckCircle2, ChevronDown } from "lucide-react";
+import { Download, ChevronDown, CheckCircle2, RefreshCw } from "lucide-react";
 import { getUserProfile, updateUserProfile } from "@/lib/db";
 import type { UserProfile } from "@/types/userProfile";
 import {
@@ -96,6 +96,7 @@ export default function UpdateChecker() {
                 checkForUpdates();
             }
         };
+        console.log(userProfile);
 
         loadUserProfile();
     }, []);
@@ -184,7 +185,52 @@ export default function UpdateChecker() {
             }
         }}>
             <DialogContent>
-                {/* Dialog header, description, etc. (unchanged) */}
+                <DialogHeader>
+                    <DialogTitle>
+                        {checking ? "Checking for Updates" :
+                            error ? "Update Error" :
+                                downloadComplete ? "Update Complete" :
+                                    "Update Available"}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {checking ? (
+                            "Please wait while we check for updates..."
+                        ) : error ? (
+                            error
+                        ) : downloadComplete ? (
+                            "Update has been installed. Application will restart momentarily."
+                        ) : updateAvailable ? (
+                            <>
+                                <p className="mb-2">A new version is available: v{updateAvailable.version}</p>
+                                <div className="max-h-32 overflow-y-auto bg-gray-50 p-2 rounded text-sm">
+                                    <p className="whitespace-pre-line">{updateAvailable.body}</p>
+                                </div>
+                            </>
+                        ) : null}
+                    </DialogDescription>
+                </DialogHeader>
+
+                {checking && (
+                    <div className="flex items-center justify-center py-4">
+                        <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
+                    </div>
+                )}
+
+                {downloading && !downloadComplete && (
+                    <div className="space-y-4 py-4">
+                        <Progress value={progress} className="h-2" />
+                        <p className="text-center text-sm text-gray-500">
+                            Downloading update: {progress}%
+                        </p>
+                    </div>
+                )}
+
+                {downloadComplete && (
+                    <div className="flex items-center justify-center py-4">
+                        <CheckCircle2 className="h-12 w-12 text-green-500" />
+                    </div>
+                )}
+
 
                 <DialogFooter>
                     {error && (
