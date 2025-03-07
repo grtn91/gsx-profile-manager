@@ -92,10 +92,10 @@ export function GsxProfilesTable() {
           try {
             if (checked) {
               await syncProfile(profile.id);
-              toast.success(`${profile.airportIcaoCode} profile synced`);
+              toast.success(`${profile.airportIcaoCode} selected to be linked`);
             } else {
               await unsyncProfile(profile.id);
-              toast.success(`${profile.airportIcaoCode} profile unsynced`);
+              toast.success(`${profile.airportIcaoCode} unselected`);
             }
           } catch (error) {
             toast.error(`Failed to update profile status: ${error instanceof Error ? error.message : String(error)}`);
