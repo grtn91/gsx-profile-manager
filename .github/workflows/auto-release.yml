@@ -89,7 +89,7 @@ jobs:
           ls -la src-tauri/target/release/bundle/nsis/
           
           # Make sure to escape spaces in the filename correctly
-          SIG_FILE="src-tauri/target/release/bundle/nsis/GSX Profile Manager_${VERSION}_x64-setup.exe.sig"
+          SIG_FILE="src-tauri/target/release/bundle/nsis/GSX-Profile-Manager_${VERSION}_x64-setup.exe.sig"
           echo "Looking for signature file: ${SIG_FILE}"
           
           if [ -f "$SIG_FILE" ]; then
