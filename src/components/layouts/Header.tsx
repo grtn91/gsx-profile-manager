@@ -70,27 +70,29 @@ function Header() {
       setCheckingForUpdates(true);
       toast.info("Checking for updates...");
 
-      const update = await check({
-        timeout: 10000,
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'GSX-Profile-Manager',
-        }
-      });
+      // Call the check function - no need to pass parameters unless you have custom endpoints
+      const update = await check();
 
       if (update) {
+        console.log("Update found:", update); // Debug output
+
+        // Ensure we're setting the state properly
+        setUpdateData(update);
+
+        // Force a delay to ensure state has updated
+        setTimeout(() => {
+          setShowUpdateChecker(true);
+        }, 100);
+
         toast.success(`Update available: v${update.version}`, {
           description: "The update dialog will appear shortly.",
           duration: 5000
         });
-
-        // Store the update data and show the dialog
-        setUpdateData(update);
-        setShowUpdateChecker(true);
       } else {
         toast.success("You're using the latest version!");
       }
     } catch (error) {
+      console.error("Update check failed:", error); // More detailed error logging
       toast.error(`Failed to check for updates: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setCheckingForUpdates(false);
