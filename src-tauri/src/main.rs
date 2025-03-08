@@ -5,6 +5,7 @@
 mod create_profile_symlink;
 mod db;
 use tauri_plugin_sql::Builder;
+mod airport_community_scanner;
 mod is_admin;
 
 fn main() {
@@ -22,6 +23,7 @@ fn main() {
             create_profile_symlink::activate_profiles,
             is_admin::is_admin,
             is_admin::restart_as_admin,
+            airport_community_scanner::scan_for_airport_scenery,
         ])
         .setup(|_app| {
             // Initialize the database.
