@@ -1,277 +1,84 @@
-import { useState, useEffect } from "react";
-import { check } from '@tauri-apps/plugin-updater';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { ArrowDownToLine } from 'lucide-react';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
-import { Download, ChevronDown, CheckCircle2, RefreshCw } from "lucide-react";
-import { getUserProfile, updateUserProfile } from "@/lib/db";
-import type { UserProfile } from "@/types/userProfile";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
-export default function UpdateChecker() {
-    const [updateAvailable, setUpdateAvailable] = useState<{ version: string, body: string } | null>(null);
-    const [checking, setChecking] = useState(true);
-    const [downloading, setDownloading] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [downloadComplete, setDownloadComplete] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [updateObject, setUpdateObject] = useState<any>(null);
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+interface UpdateCheckerProps {
+    updateData: any;
+    onClose: () => void;
+}
 
-    const checkForUpdates = async () => {
-        setChecking(true);
-        setError(null);
+export default function UpdateChecker({ updateData, onClose }: UpdateCheckerProps) {
+    const [isInstalling, setIsInstalling] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(0);
+    const [contentLength, setContentLength] = useState(0);
+    const [downloadedBytes, setDownloadedBytes] = useState(0);
 
+    const handleInstallUpdate = async () => {
         try {
-            console.log("Checking for updates...");
-            const update = await check({
-                timeout: 10000,
-                headers: {
-                    'Accept': 'application/vnd.github.v3+json',
-                    'User-Agent': 'GSX-Profile-Manager',
-                }
-            });
-            console.log("Update check result:", update);
+            setIsInstalling(true);
 
-            if (update) {
-                // Store the full update object for later use
-                setUpdateObject(update);
-
-                // Extract version and notes, handling object/string type issues
-                const version = String(update.version || "Unknown");
-
-                // Handle the body content which might be an object
-                let bodyContent = "";
-                if (update.body) {
-                    if (typeof update.body === 'string') {
-                        bodyContent = update.body;
-                    } else {
-                        try {
-                            bodyContent = JSON.stringify(update.body, null, 2);
-                        } catch (e) {
-                            bodyContent = "Release notes available. Please see GitHub for details.";
-                        }
-                    }
-                }
-
-                setUpdateAvailable({
-                    version,
-                    body: bodyContent
-                });
-            } else {
-                setUpdateAvailable(null);
-            }
-        } catch (err) {
-            console.error("Failed to check for updates:", err);
-            setError(`Update check failed: ${err instanceof Error ? err.message : String(err)}`);
-        } finally {
-            setChecking(false);
-        }
-    };
-
-    useEffect(() => {
-        // Load user profile first
-        const loadUserProfile = async () => {
-            const profile = await getUserProfile();
-            setUserProfile(profile);
-
-            // Check if updates should be skipped
-            if (profile?.skipUpdate && profile.skipUpdateUntil && new Date(profile.skipUpdateUntil) > new Date()) {
-                console.log(`Skipping update check until ${profile.skipUpdateUntil}`);
-                setChecking(false);
-            } else {
-                // If skip period expired, reset skip settings
-                if (profile?.skipUpdate) {
-                    await updateUserProfile({
-                        skipUpdate: false,
-                        skipUpdateUntil: null
-                    });
-                }
-                checkForUpdates();
-            }
-        };
-        console.log(userProfile);
-
-        loadUserProfile();
-    }, []);
-
-    const handleSkipUpdate = async (duration: '7days' | '30days' | 'forever') => {
-        let skipUpdateUntil: Date | null = null;
-
-        if (duration === '7days') {
-            skipUpdateUntil = new Date();
-            skipUpdateUntil.setDate(skipUpdateUntil.getDate() + 7);
-        } else if (duration === '30days') {
-            skipUpdateUntil = new Date();
-            skipUpdateUntil.setDate(skipUpdateUntil.getDate() + 30);
-        } else if (duration === 'forever') {
-            // Set to a very far future date - effectively forever
-            skipUpdateUntil = new Date(8640000000000000); // Max date
-        }
-
-        try {
-            await updateUserProfile({
-                skipUpdate: true,
-                skipUpdateUntil
-            });
-
-            console.log(`Updates will be skipped until ${skipUpdateUntil?.toISOString()}`);
-            setUpdateAvailable(null); // Close the dialog
-        } catch (err) {
-            console.error("Failed to save skip update preference:", err);
-        }
-    };
-
-    const handleUpdate = async () => {
-        if (!updateObject) return;
-
-        setDownloading(true);
-        setProgress(0);
-        setError(null);
-
-        try {
-            let downloaded = 0;
-            let contentLength = 0;
-
-            await updateObject.downloadAndInstall((event: any) => {
+            // The updateData object already has the downloadAndInstall method
+            await updateData.downloadAndInstall((event: any) => {
                 switch (event.event) {
                     case 'Started':
-                        contentLength = event.data.contentLength;
-                        console.log(`Started downloading ${contentLength} bytes`);
+                        setContentLength(event.data.contentLength);
+                        toast.info("Download started");
                         break;
                     case 'Progress':
-                        downloaded += event.data.chunkLength;
-                        const progressPercent = Math.round((downloaded / contentLength) * 100);
-                        setProgress(progressPercent);
-                        console.log(`Downloaded ${downloaded} of ${contentLength} bytes (${progressPercent}%)`);
+                        const newDownloaded = downloadedBytes + event.data.chunkLength;
+                        setDownloadedBytes(newDownloaded);
+                        setDownloadProgress((newDownloaded / contentLength) * 100);
                         break;
                     case 'Finished':
-                        console.log('Download finished');
-                        setProgress(100);
-                        setDownloadComplete(true);
+                        toast.success("Download complete, installing update...");
                         break;
                 }
             });
 
-            console.log('Update installed');
-            // Give the user a moment to see the success message before relaunching
-            setTimeout(async () => {
-                await relaunch();
-            }, 2000);
-
-        } catch (err) {
-            console.error("Failed to download and install update:", err);
-            setError(`Update failed: ${err instanceof Error ? err.message : String(err)}`);
-            setDownloading(false);
+            // If we reach here, the update is installed but we need to relaunch
+            toast.success("Update installed successfully");
+            await relaunch();
+        } catch (error) {
+            setIsInstalling(false);
+            toast.error(`Update failed: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
 
-    // If not checking and no update is available, don't render anything
-    if (!checking && !updateAvailable && !error) {
-        return null;
-    }
-
     return (
-        <Dialog open={!!(updateAvailable || checking || error)} onOpenChange={() => {
-            if (!downloading) {
-                setUpdateAvailable(null);
-                setError(null);
-            }
-        }}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>
-                        {checking ? "Checking for Updates" :
-                            error ? "Update Error" :
-                                downloadComplete ? "Update Complete" :
-                                    "Update Available"}
-                    </DialogTitle>
-                    <DialogDescription>
-                        {checking ? (
-                            "Please wait while we check for updates..."
-                        ) : error ? (
-                            error
-                        ) : downloadComplete ? (
-                            "Update has been installed. Application will restart momentarily."
-                        ) : updateAvailable ? (
-                            <>
-                                <p className="mb-2">A new version is available: v{updateAvailable.version}</p>
-                                <div className="max-h-32 overflow-y-auto bg-gray-50 p-2 rounded text-sm">
-                                    <p className="whitespace-pre-line">{updateAvailable.body}</p>
-                                </div>
-                            </>
-                        ) : null}
-                    </DialogDescription>
-                </DialogHeader>
+        <div className="space-y-4">
+            <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold">Version {updateData.version}</h2>
+                <p className="text-muted-foreground">
+                    {updateData.body || "New features and improvements available"}
+                </p>
+            </div>
 
-                {checking && (
-                    <div className="flex items-center justify-center py-4">
-                        <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
+            {isInstalling ? (
+                <div className="space-y-2">
+                    <div className="w-full bg-secondary rounded-full h-2.5">
+                        <div
+                            className="bg-primary h-2.5 rounded-full"
+                            style={{ width: `${downloadProgress}%` }}
+                        ></div>
                     </div>
-                )}
-
-                {downloading && !downloadComplete && (
-                    <div className="space-y-4 py-4">
-                        <Progress value={progress} className="h-2" />
-                        <p className="text-center text-sm text-gray-500">
-                            Downloading update: {progress}%
-                        </p>
-                    </div>
-                )}
-
-                {downloadComplete && (
-                    <div className="flex items-center justify-center py-4">
-                        <CheckCircle2 className="h-12 w-12 text-green-500" />
-                    </div>
-                )}
-
-
-                <DialogFooter>
-                    {error && (
-                        <Button onClick={checkForUpdates}>
-                            Try Again
-                        </Button>
-                    )}
-
-                    {updateAvailable && !downloading && !downloadComplete && (
-                        <>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" disabled={downloading}>
-                                        Skip Update <ChevronDown className="ml-2 h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleSkipUpdate('7days')}>
-                                        Skip for 7 days
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleSkipUpdate('30days')}>
-                                        Skip for 30 days
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleSkipUpdate('forever')}>
-                                        Skip forever
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-
-                            <Button
-                                onClick={handleUpdate}
-                                disabled={downloading}
-                                className="bg-blue-600 hover:bg-blue-700"
-                            >
-                                <Download className="mr-2 h-4 w-4" />
-                                Download & Install
-                            </Button>
-                        </>
-                    )}
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                    <p className="text-sm text-center text-muted-foreground">
+                        Downloading update: {downloadProgress.toFixed(0)}%
+                        {contentLength > 0 && ` (${(downloadedBytes / 1048576).toFixed(2)} MB / ${(contentLength / 1048576).toFixed(2)} MB)`}
+                    </p>
+                </div>
+            ) : (
+                <div className="flex justify-center space-x-2">
+                    <Button variant="outline" onClick={onClose}>
+                        Skip for Now
+                    </Button>
+                    <Button onClick={handleInstallUpdate} className="flex items-center">
+                        <ArrowDownToLine className="mr-2 h-4 w-4" />
+                        Install Update
+                    </Button>
+                </div>
+            )}
+        </div>
     );
 }
