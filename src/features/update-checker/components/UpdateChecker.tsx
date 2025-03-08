@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { ArrowDownToLine } from 'lucide-react';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { type Update } from '@tauri-apps/plugin-updater';
 
 interface UpdateCheckerProps {
-    updateData: any;
+    updateData: Update;
     onClose: () => void;
 }
 
