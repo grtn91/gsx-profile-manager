@@ -108,7 +108,7 @@ jobs:
             "platforms": {
               "windows-x86_64": {
                 "signature": "'$SIGNATURE'",
-                "url": "https://github.com/grtn91/gsx-profile-manager/releases/download/v'$VERSION'/GSX%20Profile%20Manager_'$VERSION'_x64-setup.exe"
+                "url": "https://github.com/grtn91/gsx-profile-manager/releases/download/v'$VERSION'/GSX-Profile-Manager_'$VERSION'_x64-setup.exe"
               }
             }
           }' > latest.json
