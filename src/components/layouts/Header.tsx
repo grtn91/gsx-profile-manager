@@ -16,7 +16,7 @@ import { useProfileStore } from "@/store/useGsxProfileStore";
 import { toast } from "sonner";
 import { invoke } from "@tauri-apps/api/core";
 import packageJson from "@/../package.json";
-import { check } from '@tauri-apps/plugin-updater';
+import { check, type Update } from '@tauri-apps/plugin-updater';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +34,7 @@ function Header() {
   const [isApplying, setIsApplying] = useState(false);
   const [checkingForUpdates, setCheckingForUpdates] = useState(false);
   const [showUpdateChecker, setShowUpdateChecker] = useState(false);
-  const [updateData, setUpdateData] = useState(null);
+  const [updateData, setUpdateData] = useState<Update | null>(null);
   const { getSyncedProfiles } = useProfileStore();
 
   const [showAirportMatcher, setShowAirportMatcher] = useState(false);
