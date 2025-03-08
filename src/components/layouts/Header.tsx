@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import UserSettings from "@/features/user-settings/components/user-settings";
 import AirportProfileMatcher from "@/features/airport-profile-matcher/components/airportProfileMatcher";
+import UpdateChecker from "@/features/update-checker/components/UpdateChecker";
 
 function Header() {
   // State to control the visibility of the profile uploader modal
@@ -32,6 +33,8 @@ function Header() {
   const [showUserSettings, setShowUserSettings] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [checkingForUpdates, setCheckingForUpdates] = useState(false);
+  const [showUpdateChecker, setShowUpdateChecker] = useState(false);
+  const [updateData, setUpdateData] = useState(null);
   const { getSyncedProfiles } = useProfileStore();
 
   const [showAirportMatcher, setShowAirportMatcher] = useState(false);
@@ -80,6 +83,10 @@ function Header() {
           description: "The update dialog will appear shortly.",
           duration: 5000
         });
+
+        // Store the update data and show the dialog
+        setUpdateData(update);
+        setShowUpdateChecker(true);
       } else {
         toast.success("You're using the latest version!");
       }
@@ -186,19 +193,42 @@ function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Add the Airport Matcher Modal */}
-        <Dialog open={showAirportMatcher} onOpenChange={setShowAirportMatcher}>
-          <DialogContent className="sm:max-w-[700px]">
-            <DialogHeader className="hidden">
-              <DialogTitle>Airport Profile Matcher</DialogTitle>
-              <DialogDescription>
-                Check your community airports against your stored GSX profiles
-              </DialogDescription>
-            </DialogHeader>
-            <AirportProfileMatcher onClose={() => setShowAirportMatcher(false)} />
-          </DialogContent>
-        </Dialog>
       </nav>
+      {/* Add the Airport Matcher Modal */}
+      <Dialog open={showAirportMatcher} onOpenChange={setShowAirportMatcher}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader className="hidden">
+            <DialogTitle>Airport Profile Matcher</DialogTitle>
+            <DialogDescription>
+              Check your community airports against your stored GSX profiles
+            </DialogDescription>
+          </DialogHeader>
+          <AirportProfileMatcher onClose={() => setShowAirportMatcher(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Add the Update Checker Modal */}
+      <Dialog
+        open={showUpdateChecker}
+        onOpenChange={setShowUpdateChecker}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Update Available</DialogTitle>
+            <DialogDescription>
+              A new version of GSX Profile Manager is available
+            </DialogDescription>
+          </DialogHeader>
+          {updateData && (
+            <UpdateChecker
+              updateData={updateData}
+              onClose={() => setShowUpdateChecker(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+
 
       {/* Profile Uploader Modal */}
       <Dialog open={showProfileUploader} onOpenChange={setShowProfileUploader}>
