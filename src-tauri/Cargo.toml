@@ -1,6 +1,6 @@
 [package]
 name = "gsx-profile-manager"
-version = "2.2.3"
+version = "2.3.0"
 description = "A Manager to manage GSX Profiles"
 authors = ["grtn"]
 edition = "2021"
@@ -31,6 +31,8 @@ chrono = "0.4.40"
 tauri-plugin-shell = "2"
 tauri-plugin-process = "2"
 tauri-plugin-http = "2"
+walkdir = "2.3.3"
+regex = "1.9.1"
 
 [[bin]]
 name = "gsx-profile-manager" 

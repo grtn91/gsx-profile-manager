@@ -1,8 +1,7 @@
-import { Settings, User, UploadCloud, Play, RefreshCcw, UserCog } from "lucide-react";
+import { Settings, User, UploadCloud, Play, RefreshCcw, UserCog, SearchCheck } from "lucide-react";
 import { Badge, badgeVariants } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import logoSvg from '@/assets/gsx-manager-logo.svg';
-import { ButtonWithTooltip } from "../ui/button-with-tooltip";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -25,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import UserSettings from "@/features/user-settings/components/user-settings";
+import AirportProfileMatcher from "@/features/airport-profile-matcher/components/airportProfileMatcher";
 
 function Header() {
   // State to control the visibility of the profile uploader modal
@@ -33,6 +33,8 @@ function Header() {
   const [isApplying, setIsApplying] = useState(false);
   const [checkingForUpdates, setCheckingForUpdates] = useState(false);
   const { getSyncedProfiles } = useProfileStore();
+
+  const [showAirportMatcher, setShowAirportMatcher] = useState(false);
 
   const handleApplyProfiles = async () => {
     try {
@@ -158,13 +160,44 @@ function Header() {
         </DropdownMenu>
 
         {/* User button - Now using regular button without asChild */}
-        <ButtonWithTooltip
-          variant="outline"
-          className="h-9 w-9 mr-2"
-          disabled
-          tooltip="Coming soon"
-          icon={<User className="h-5 w-5" />}
-        />
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <Button
+              variant="outline"
+              className="h-9 w-9 mr-2"
+            ><User className="h-5 w-5" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem
+              onClick={() => setShowAirportMatcher(true)}
+              disabled={checkingForUpdates}
+              className="flex items-center gap-2"
+            >
+              <SearchCheck className="h-4 w-4" />
+              <span>Check missing profiles</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="flex items-center gap-2"
+              disabled={true}
+            >
+              <UserCog className="h-4 w-4" />
+              <span>Get Simbrief Route</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Add the Airport Matcher Modal */}
+        <Dialog open={showAirportMatcher} onOpenChange={setShowAirportMatcher}>
+          <DialogContent className="sm:max-w-[700px]">
+            <DialogHeader className="hidden">
+              <DialogTitle>Airport Profile Matcher</DialogTitle>
+              <DialogDescription>
+                Check your community airports against your stored GSX profiles
+              </DialogDescription>
+            </DialogHeader>
+            <AirportProfileMatcher onClose={() => setShowAirportMatcher(false)} />
+          </DialogContent>
+        </Dialog>
       </nav>
 
       {/* Profile Uploader Modal */}
