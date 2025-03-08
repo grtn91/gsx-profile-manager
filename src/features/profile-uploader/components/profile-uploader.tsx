@@ -23,6 +23,7 @@ import { useProfileStore } from '@/store/useGsxProfileStore';
 import { GSXProfile } from '@/types/gsx-profile';
 import { getRelativePath } from '@/lib/utils';
 import { X } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 
 interface ProfileUploaderProps {
     onSuccess?: () => void;
@@ -37,8 +38,51 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
         existingProfile?.filePaths || []
     );
 
-
     const { addProfile, updateProfile } = useProfileStore();
+
+    // Add this helper function to extract a zip file
+    const extractZipFile = async (zipFile: File): Promise<File[]> => {
+        try {
+            // First, we need to read the file as an ArrayBuffer
+            const fileArrayBuffer = await zipFile.arrayBuffer();
+
+            // Convert ArrayBuffer to Uint8Array for Tauri
+            const fileBytes = new Uint8Array(fileArrayBuffer);
+
+            // Call Tauri command to extract the zip
+            const extractedFiles = await invoke<Array<{ name: string, content: number[] }>>(
+                'extract_zip_file',
+                { zipContent: Array.from(fileBytes) }
+            );
+
+            // Convert the extracted files into File objects
+            return extractedFiles.map(extractedFile => {
+                const content = new Uint8Array(extractedFile.content);
+                return new File([content], extractedFile.name, {
+                    type: getFileType(extractedFile.name),
+                });
+            });
+        } catch (error) {
+            console.error('Error extracting ZIP file:', error);
+            throw new Error(`Failed to extract ZIP: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    };
+
+    // Helper to determine MIME type based on file extension
+    const getFileType = (filename: string): string => {
+        const extension = filename.split('.').pop()?.toLowerCase();
+        switch (extension) {
+            case 'py': return 'text/x-python';
+            case 'ini': return 'text/plain';
+            case 'txt': return 'text/plain';
+            case 'json': return 'application/json';
+            case 'xml': return 'application/xml';
+            default: return 'application/octet-stream';
+        }
+    };
+
+
+
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(formSchema),
@@ -130,25 +174,49 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
         }
     }, [watchCountry, form, existingProfile]);
 
-    // Handle file drop - updated with duplicate checking
+    // Update your handleFilesAdded function
     const handleFilesAdded = useCallback(async (acceptedFiles: File[]) => {
-        // Filter out duplicates
-        const uniqueFiles = acceptedFiles.filter(file => !isDuplicateFile(file, files));
-        const duplicateFiles = acceptedFiles.filter(file => isDuplicateFile(file, files));
+        try {
+            let filesToAdd: File[] = [];
 
-        // Only add unique files to state
-        if (uniqueFiles.length > 0) {
-            setFiles(prev => [...prev, ...uniqueFiles]);
-            toast.success(`${uniqueFiles.length} file(s) uploaded successfully!`);
-        }
+            // Process each file, extracting ZIPs if found
+            for (const file of acceptedFiles) {
+                if (file.name.toLowerCase().endsWith('.zip')) {
+                    toast.info(`Extracting ZIP file: ${file.name}`);
 
-        // Notify about duplicates
-        if (duplicateFiles.length > 0) {
-            const duplicateNames = duplicateFiles.map(file => file.name).join(", ");
-            toast.warning(`Skipped ${duplicateFiles.length} duplicate file(s): ${duplicateNames}`);
+                    const extractedFiles = await extractZipFile(file);
+
+                    if (extractedFiles.length > 0) {
+                        toast.success(`Extracted ${extractedFiles.length} files from ${file.name}`);
+                        filesToAdd = [...filesToAdd, ...extractedFiles];
+                    } else {
+                        toast.warning(`No valid files found in ZIP: ${file.name}`);
+                    }
+                } else {
+                    filesToAdd.push(file);
+                }
+            }
+
+            // Filter out duplicates
+            const uniqueFiles = filesToAdd.filter(file => !isDuplicateFile(file, files));
+            const duplicateFiles = filesToAdd.filter(file => isDuplicateFile(file, files));
+
+            // Add unique files to state
+            if (uniqueFiles.length > 0) {
+                setFiles(prev => [...prev, ...uniqueFiles]);
+                toast.success(`${uniqueFiles.length} file(s) uploaded successfully!`);
+            }
+
+            // Notify about duplicates
+            if (duplicateFiles.length > 0) {
+                const duplicateNames = duplicateFiles.map(file => file.name).join(", ");
+                toast.warning(`Skipped ${duplicateFiles.length} duplicate file(s): ${duplicateNames}`);
+            }
+        } catch (error) {
+            console.error("Error processing files:", error);
+            toast.error(`Failed to process files: ${error instanceof Error ? error.message : String(error)}`);
         }
     }, [files]);
-
     // Remove a file from the list
     const handleRemoveFile = async (index: number) => {
         try {

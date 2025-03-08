@@ -248,10 +248,16 @@ pub async fn activate_profiles(
 
     // Now proceed with symlink removal and creation
     helpers::remove_existing_symlinks(&target_dir)?;
-    let activated_count = helpers::create_profile_symlinks(selected_files, &target_dir)?;
 
-    Ok(format!(
-        "Successfully activated {} profiles",
-        activated_count
-    ))
+    let activated_file_count =
+        helpers::create_profile_symlinks(selected_files.clone(), &target_dir)?;
+    // Return a more accurate message that focuses on successful activation
+    if activated_file_count > 0 {
+        Ok(
+            "GSX profiles activated successfully! Your simulator is ready to use these profiles."
+                .to_string(),
+        )
+    } else {
+        Ok("No profiles were activated. Please check your selected profiles.".to_string())
+    }
 }
