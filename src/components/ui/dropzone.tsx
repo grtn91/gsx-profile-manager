@@ -12,6 +12,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({ onFilesAdded }) => {
         accept: {
             'text/x-python': ['.py'],
             'text/plain': ['.ini'],
+            'application/zip': ['.zip'],
         },
         noClick: false,
         noKeyboard: false,
@@ -39,7 +40,7 @@ export const FileDropzone: React.FC<FileDropzoneProps> = ({ onFilesAdded }) => {
                     <>
                         <p className="font-medium">Drag & drop GSX profile files here</p>
                         <p className="text-sm text-muted-foreground">
-                            or click to select files (.py and .ini only)
+                            or click to select files (.py and .ini only, or .zip archive)
                         </p>
                     </>
                 )}

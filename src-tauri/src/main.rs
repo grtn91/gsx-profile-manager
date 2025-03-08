@@ -7,6 +7,7 @@ mod db;
 use tauri_plugin_sql::Builder;
 mod airport_community_scanner;
 mod is_admin;
+mod zip_handler;
 
 fn main() {
     // Create a new Tauri application builder with default settings.
@@ -24,6 +25,7 @@ fn main() {
             is_admin::is_admin,
             is_admin::restart_as_admin,
             airport_community_scanner::scan_for_airport_scenery,
+            zip_handler::extract_zip_file,
         ])
         .setup(|_app| {
             // Initialize the database.

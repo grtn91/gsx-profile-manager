@@ -14,6 +14,10 @@ GSX Profile Manager has been completely overhauled to provide a more streamlined
 If you have previously used **Version 1** and are now installing **Version 2**, be sure to select the option to **flush the app data directory** (if available). This ensures a clean installation and prevents conflicts with old configurations.
 For future updates beyond Version 2, this step will not be necessary or recommended.
 
+## Antivirus Warnings
+
+Some antivirus software may flag this application as suspicious because it's not widely distributed yet. You can verify its safety by checking our [VirusTotal scan results](https://www.virustotal.com/gui/url/eab3fcafa67b33720d2d9af07fffc332f6e60f8859e395663c3117917db3e6e6/detection).
+
 # 🔍 Key Features
 ✅ **Easy File Upload** – Add and manage your GSX profiles effortlessly.
 ✅ **Metadata Support** – Assign and edit metadata (e.g., airport ICAO, developer) for better organization.
