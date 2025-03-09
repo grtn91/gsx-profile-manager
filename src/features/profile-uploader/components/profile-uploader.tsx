@@ -326,7 +326,7 @@ export const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onSuccess, exi
         : files.length > 0;
 
     return (
-        <Card className="w-full mb-8">
+        <Card className="w-full mb-8 border-none shadow-none">
             <CardHeader>
                 <CardTitle>{existingProfile ? 'Update GSX Profile' : 'Store GSX Profile'}</CardTitle>
                 <CardDescription>
