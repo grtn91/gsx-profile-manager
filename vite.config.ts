@@ -6,7 +6,7 @@ import path, { resolve } from "path"
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig(() => ({
+export default defineConfig(async () => ({
   plugins: [
     react(),
     tailwindcss(),
@@ -15,6 +15,15 @@ export default defineConfig(() => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  build: {
+    // Specify multiple entry points for the build
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        splashscreen: resolve(__dirname, 'splashscreen.html')
+      }
+    }
   },
   server: {
     port: 1420,
@@ -31,12 +40,4 @@ export default defineConfig(() => ({
       ignored: ["**/src-tauri/**"],
     },
   },
-  build: {
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, "src/index.html"),
-        splashscreen: resolve(__dirname, "src/splashscreen.html")
-      }
-    }
-  }
 }));
