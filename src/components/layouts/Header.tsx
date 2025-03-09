@@ -35,7 +35,7 @@ function Header() {
   const [checkingForUpdates, setCheckingForUpdates] = useState(false);
   const [showUpdateChecker, setShowUpdateChecker] = useState(false);
   const [updateData, setUpdateData] = useState<Update | null>(null);
-  const { getSyncedProfiles } = useProfileStore();
+  const { getSyncedProfiles, markProfilesAsApplied } = useProfileStore();
 
   const [showAirportMatcher, setShowAirportMatcher] = useState(false);
 
@@ -56,6 +56,8 @@ function Header() {
       const result = await invoke<string>("activate_profiles", {
         selectedFiles: filePaths // Changed from selected_files to selectedFiles
       });
+
+      await markProfilesAsApplied(syncedProfiles.map(p => p.id));
 
       toast.success(result);
     } catch (error) {
