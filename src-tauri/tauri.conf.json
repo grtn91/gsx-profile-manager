@@ -26,7 +26,6 @@
         "url": "splashscreen",
         "decorations": false,
         "center": true,
-        "visible": true
       }
     ],
     "security": {
