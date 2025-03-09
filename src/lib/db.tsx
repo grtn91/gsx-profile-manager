@@ -7,7 +7,7 @@ import { UserProfile } from '@/types/userProfile';
 let db: Database | null = null;
 
 // Track database version to manage migrations
-const CURRENT_DB_VERSION = 3; // Increment when schema changes
+const CURRENT_DB_VERSION = 4; // Increment when schema changes
 
 export async function initializeDb(): Promise<void> {
   try {
@@ -124,7 +124,26 @@ async function runMigrations(currentVersion: number): Promise<void> {
     }
 
     // Add more migrations here in the future
-    // if (currentVersion < 4) { ... }
+    // Migration 3 to 4: Adding ignoredAirports to user_profiles
+    if (currentVersion < 4) {
+      console.log('Applying migration v3 to v4: Adding ignoredAirports to user_profiles');
+
+      try {
+        // Check if the column already exists (for safety)
+        const tableInfo = await db.select<{ name: string }[]>("PRAGMA table_info(user_profiles)");
+        const columnExists = tableInfo.some(col => col.name === 'ignoredAirports');
+
+        if (!columnExists) {
+          await db.execute(`ALTER TABLE user_profiles ADD COLUMN ignoredAirports TEXT DEFAULT '[]';`);
+          console.log('Added ignoredAirports column to user_profiles table');
+        } else {
+          console.log('ignoredAirports column already exists, skipping');
+        }
+      } catch (error) {
+        console.error('Failed to add ignoredAirports column:', error);
+        throw error;
+      }
+    }
 
     // Update the database version
     await db.execute('UPDATE db_version SET version = ? WHERE id = 1', [CURRENT_DB_VERSION]);
@@ -414,6 +433,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       skipUpdate: Boolean(profile.skipUpdate),
       skipUpdateUntil: profile.skipUpdateUntil ? new Date(profile.skipUpdateUntil) : null,
       communityFolderAirports: JSON.parse(profile.communityFolderAirports || '[]'),
+      ignoredAirports: JSON.parse(profile.ignoredAirports || '[]'),
       createdAt: new Date(profile.createdAt),
       updatedAt: new Date(profile.updatedAt)
     };
@@ -466,6 +486,11 @@ export async function updateUserProfile(updates: Partial<UserProfile>): Promise<
       values.push(JSON.stringify(updates.communityFolderAirports));
     }
 
+    if ('ignoredAirports' in updates && updates.ignoredAirports) {
+      updatedFields.push(`ignoredAirports = $${paramIndex++}`);
+      values.push(JSON.stringify(updates.ignoredAirports));
+    }
+
     // Always update the updatedAt timestamp
     updatedFields.push(`updatedAt = $${paramIndex++}`);
     values.push(new Date().toISOString());
@@ -493,19 +518,21 @@ async function createDefaultUserProfile(): Promise<UserProfile> {
     skipUpdate: false,
     skipUpdateUntil: null,
     communityFolderAirports: [],
+    ignoredAirports: [],
     createdAt: now,
     updatedAt: now
   };
 
   await db.execute(`
     INSERT INTO user_profiles (
-      simbriefUsername, skipUpdate, skipUpdateUntil, communityFolderAirports, createdAt, updatedAt
-    ) VALUES ($1, $2, $3, $4, $5, $6)
+      simbriefUsername, skipUpdate, skipUpdateUntil, communityFolderAirports, ignoredAirports, createdAt, updatedAt
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
   `, [
     defaultProfile.simbriefUsername,
     defaultProfile.skipUpdate ? 1 : 0,
     defaultProfile.skipUpdateUntil?.toISOString() || null,
     JSON.stringify(defaultProfile.communityFolderAirports),
+    JSON.stringify(defaultProfile.ignoredAirports),
     defaultProfile.createdAt.toISOString(),
     defaultProfile.updatedAt.toISOString()
   ]);
@@ -520,6 +547,7 @@ async function createDefaultUserProfile(): Promise<UserProfile> {
     skipUpdate: Boolean(profile.skipUpdate),
     skipUpdateUntil: profile.skipUpdateUntil ? new Date(profile.skipUpdateUntil) : null,
     communityFolderAirports: JSON.parse(profile.communityFolderAirports),
+    ignoredAirports: JSON.parse(profile.ignoredAirports || '[]'),
     createdAt: new Date(profile.createdAt),
     updatedAt: new Date(profile.updatedAt)
   };

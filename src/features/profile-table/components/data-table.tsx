@@ -348,8 +348,8 @@ export function GsxProfilesTable() {
       <div className="flex items-center py-4"><>
         {/* Edit Profile Dialog */}
         <Dialog open={profileToEdit !== null} onOpenChange={(open) => !open && setProfileToEdit(null)}>
-          <DialogContent className="max-w-5xl w-full"> {/* Increased width to match Header dialog */}
-            <DialogHeader>
+          <DialogContent className="sm:max-w-[fit-content] md:max-w-[fit]"> {/* Increased width to match Header dialog */}
+            <DialogHeader className="hidden">
               <DialogTitle className="text-xl font-bold">Update GSX Profile</DialogTitle>
               <DialogDescription>
                 Edit profile details or manage attached files

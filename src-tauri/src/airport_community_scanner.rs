@@ -87,7 +87,7 @@ pub fn scan_for_airport_scenery() -> Result<Vec<AirportInfo>, String> {
     let common_words = [
         "ORBX", "THAT", "ONLY", "WITH", "PAYA", "FREE", "BASE", "GATE", "SIMX", "FLYX", "LAND",
         "PORT", "JETS", "RUNX", "WAYX", "TERM", "PARK", "LOAD", "TAXI", "LIFT", "NAVX", "VORX",
-        "ILSS", "DEPT", "ARRV", "CTRL", "ATCX", "WXRT", "METX", "CITY", "BETA", "ALPHA", "PACK",
+        "ILSS", "DEPT", "ARRV", "CTRL", "ATCX", "WXRT", "METX", "CITY", "BETA", "MSFS", "PACK",
         "GATE", "JEPP",
     ];
 

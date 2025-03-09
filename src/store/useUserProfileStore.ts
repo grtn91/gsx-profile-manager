@@ -2,6 +2,7 @@ import { UserProfile } from "@/types/userProfile";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getUserProfile, updateUserProfile } from "@/lib/db";
+import { toast } from "sonner";
 
 interface UserProfileState {
     // Profile data
@@ -20,6 +21,7 @@ interface UserProfileState {
     setSkipUpdate: (skip: boolean, duration?: '7days' | '30days' | 'forever') => Promise<void>;
     setSimbriefUsername: (username: string) => Promise<void>;
     setCommunityFolderAirports: (airports: string[]) => Promise<void>;
+    setIgnoredAirports: (ignoredAirports: string[]) => Promise<void>;
 }
 
 export const useUserProfileStore = create<UserProfileState>()(
@@ -92,6 +94,10 @@ export const useUserProfileStore = create<UserProfileState>()(
                 }
 
                 return get().updateProfile({ skipUpdate: skip, skipUpdateUntil });
+            },
+
+            setIgnoredAirports: async (ignoredAirports: string[]) => {
+                return get().updateProfile({ ignoredAirports });
             },
 
             // Convenience method for setting SimBrief username
