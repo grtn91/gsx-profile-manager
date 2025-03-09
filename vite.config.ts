@@ -16,15 +16,6 @@ export default defineConfig(async () => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  build: {
-    // Specify multiple entry points for the build
-    rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        splashscreen: resolve(__dirname, 'splashscreen.html')
-      }
-    }
-  },
   server: {
     port: 1420,
     strictPort: true,
