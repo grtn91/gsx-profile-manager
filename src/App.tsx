@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useState, useEffect } from "react";
 import { Button } from "./components/ui/button";
 import { ShieldAlert } from "lucide-react";
+import { Spinner } from "./components/ui/spinner";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -13,28 +14,37 @@ function App() {
 
   const localDev = import.meta.env.MODE === 'development';
 
+  // Combine the two effects into one to avoid race conditions
   useEffect(() => {
-    // Check if the app is running with admin rights
-    const checkAdminStatus = async () => {
-      if (localDev) {
-        setIsAdmin(true);
-        setLoading(false);
-        return;
-      }
+    const initializeApp = async () => {
       try {
-        const hasAdminRights = await invoke<boolean>("is_admin");
-        setIsAdmin(hasAdminRights);
-      } catch (error) {
-        console.error("Failed to check admin status:", error);
-        // Default to true if we can't check to avoid blocking the app
-        setIsAdmin(true);
+        // First check admin status
+        let adminStatus = true; // Default to true for safety
+
+        if (!localDev) {
+          try {
+            adminStatus = await invoke<boolean>("is_admin");
+            console.log("Admin check result:", adminStatus);
+          } catch (error) {
+            console.error("Admin check failed:", error);
+          }
+        }
+
+        setIsAdmin(adminStatus);
+
+        // If we have admin rights, load the stores
+        if (adminStatus) {
+          // Simulate loading stores or do real loading
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       } finally {
+        // Only set loading to false when everything is done
         setLoading(false);
       }
     };
 
-    checkAdminStatus();
-  }, []);
+    initializeApp();
+  }, [localDev]);
 
   const handleRestartAsAdmin = async () => {
     try {
@@ -44,12 +54,13 @@ function App() {
     }
   };
 
-  if (loading) {
+  // Show loading spinner when either loading is true OR admin status is still unknown
+  if (loading || isAdmin === null) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <Spinner size="lg" />
+          <p className="text-gray-600 text-xl">Initializing application...</p>
         </div>
       </div>
     );
@@ -69,6 +80,18 @@ function App() {
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
             Restart as Administrator
+          </Button>
+
+          {/* Add bypass button for users having issues */}
+          <Button
+            onClick={() => {
+              localStorage.setItem('gsx-bypass-admin-check', 'true');
+              setIsAdmin(true);
+            }}
+            variant="outline"
+            className="w-full mt-2"
+          >
+            Continue Anyway (Not Recommended)
           </Button>
         </div>
       </div>
