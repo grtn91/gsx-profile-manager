@@ -1,17 +1,19 @@
 import { Toaster } from "sonner";
 import "./components/css/App.css"
-import Header from './components/layouts/Header';
-import { GsxProfilesTable } from './features/profile-table/components/data-table';
+import { useState, useEffect, Suspense, lazy } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { useState, useEffect, useRef } from "react";
 import { Button } from "./components/ui/button";
 import { ShieldAlert } from "lucide-react";
+const Header = lazy(() => import('./components/layouts/Header'));
+const GsxProfilesTable = lazy(() =>
+  import('./features/profile-table/components/data-table').then(module => ({
+    default: module.GsxProfilesTable || Object.values(module)[0]
+  }))
+);
 
 function App() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const windowSwitched = useRef(false);
 
   const localDev = import.meta.env.MODE === 'development';
 
@@ -28,40 +30,13 @@ function App() {
         setIsAdmin(hasAdminRights);
       } catch (error) {
         console.error("Failed to check admin status:", error);
-        // Default to true if we can't check to avoid blocking the app
-        setIsAdmin(true);
       } finally {
         setLoading(false);
       }
     };
-
+    invoke("switch_to_main_window");
     checkAdminStatus();
   }, []);
-
-  // Add a new effect that watches the loading and isAdmin states
-  // This will trigger the window switch when loading is done
-  useEffect(() => {
-    const switchToMainWindow = async () => {
-      // Only attempt to switch windows if:
-      // 1. Loading is complete
-      // 2. User has admin rights (or we're bypassing the check)
-      // 3. We haven't already switched windows
-      if (!loading && isAdmin === true && !windowSwitched.current) {
-        try {
-          // Mark that we've attempted the window switch
-          windowSwitched.current = true;
-
-          console.log("App initialization complete, switching to main window");
-          await invoke("switch_to_main_window");
-          console.log("Switched to main window");
-        } catch (error) {
-          console.error("Failed to switch to main window:", error);
-        }
-      }
-    };
-
-    switchToMainWindow();
-  }, [loading, isAdmin]);
 
   const handleRestartAsAdmin = async () => {
     try {
@@ -103,17 +78,19 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="sticky top-0 z-10 bg-background shadow-sm">
-        <Header />
-      </div>
-      <div className="flex-grow overflow-auto h-w-full">
-        <div className="p-10">
-          <GsxProfilesTable />
-          <Toaster />
+    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-100">Loading...</div>}>
+      <div className="flex flex-col h-screen">
+        <div className="sticky top-0 z-10 bg-background shadow-sm">
+          <Header />
+        </div>
+        <div className="flex-grow overflow-auto h-w-full">
+          <div className="p-10">
+            <GsxProfilesTable />
+            <Toaster />
+          </div>
         </div>
       </div>
-    </div>
+    </Suspense>
   );
 }
 
