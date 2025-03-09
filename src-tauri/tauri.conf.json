@@ -25,7 +25,7 @@
         "label": "splashscreen",
         "url": "splashscreen",
         "decorations": false,
-        "center": true,
+        "center": true
       }
     ],
     "security": {
