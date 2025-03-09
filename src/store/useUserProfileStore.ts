@@ -2,7 +2,6 @@ import { UserProfile } from "@/types/userProfile";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getUserProfile, updateUserProfile } from "@/lib/db";
-import { toast } from "sonner";
 
 interface UserProfileState {
     // Profile data
