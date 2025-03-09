@@ -126,11 +126,25 @@ export function GsxProfilesTable() {
         )
       },
       cell: ({ row }) => {
-        const status = row.original.status
+        const profile = row.original;
+        let statusDisplay;
+
+        if (!profile.status) {
+          statusDisplay = SyncStatus.NOT_SYNCED;
+        } else {
+          // Check if this profile has been linked via the header
+          // This logic assumes you have a way to track which profiles were applied
+          // You can use a separate field in the profile or another store value
+          const isFullyLinked = profile.applied === true; // You'll need to implement this field
+          statusDisplay = isFullyLinked ? SyncStatus.SYNCED : SyncStatus.READY_TO_LINK;
+        }
 
         return (
-          <Badge variant={status ? "default" : "outline"} className="capitalize">
-            {status ? SyncStatus.SYNCED : SyncStatus.NOT_SYNCED}
+          <Badge
+            variant={!profile.status ? "outline" : (profile.applied ? "success" : "default")}
+            className="capitalize"
+          >
+            {statusDisplay}
           </Badge>
         )
       },

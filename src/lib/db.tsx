@@ -7,7 +7,7 @@ import { UserProfile } from '@/types/userProfile';
 let db: Database | null = null;
 
 // Track database version to manage migrations
-const CURRENT_DB_VERSION = 4; // Increment when schema changes
+const CURRENT_DB_VERSION = 5; // Increment when schema changes
 
 export async function initializeDb(): Promise<void> {
   try {
@@ -142,6 +142,25 @@ async function runMigrations(currentVersion: number): Promise<void> {
       } catch (error) {
         console.error('Failed to add ignoredAirports column:', error);
         throw error;
+      }
+    }
+
+    // Migration 4 to 5: Add applied column to gsx profiles
+    if (currentVersion < 5) {
+      console.log('Applying migration v4 to v5: Add applied column to gsx profiles');
+
+      // Check if the column already exists (for safety)
+      const tableInfo = await db.select<{ name: string }[]>(
+        "PRAGMA table_info(profiles)"
+      );
+
+      const columnExists = tableInfo.some(col => col.name === 'applied');
+
+      if (!columnExists) {
+        await db.execute(`ALTER TABLE profiles ADD COLUMN applied INTEGER DEFAULT 0;`);
+        console.log('Added applied column to gsx profiles');
+      } else {
+        console.log('applied column already exists, skipping');
       }
     }
 
@@ -280,6 +299,28 @@ export async function getProfileById(id: string): Promise<GSXProfile | null> {
   }
 }
 
+// Add a new function to mark profiles as applied
+export async function markProfilesAsApplied(ids: string[]): Promise<void> {
+  try {
+    if (!db) await initializeDb();
+    if (!db) throw new Error('Database not initialized');
+
+    // Reset all profiles to not applied
+    await db.execute('UPDATE profiles SET applied = 0');
+
+    // Mark the specified profiles as applied
+    for (const id of ids) {
+      await db.execute(
+        'UPDATE profiles SET applied = 1, updatedAt = $1 WHERE id = $2',
+        [new Date().toISOString(), id]
+      );
+    }
+  } catch (error) {
+    console.error('Failed to mark profiles as applied:', error);
+    throw error;
+  }
+}
+
 export async function updateProfile(id: string, data: Partial<GSXProfile>): Promise<void> {
   try {
     if (!db) await initializeDb();
@@ -341,7 +382,7 @@ export async function getAllProfiles(): Promise<GSXProfile[]> {
     if (!db) throw new Error('Database not initialized');
 
     // Get the result directly
-    const result = await db.select<ProfileRow[]>('SELECT * FROM profiles');
+    const result = await db.select<GSXProfile[]>('SELECT * FROM profiles');
     console.log("Database query result:", result);
 
     // If the table is empty, return an empty array
@@ -353,8 +394,9 @@ export async function getAllProfiles(): Promise<GSXProfile[]> {
     return result.map(profile => ({
       ...profile,
       id: profile.id as `${string}-${string}-${string}-${string}-${string}`,
-      filePaths: JSON.parse(profile.filePaths),
+      filePaths: JSON.parse(profile.filePaths.toString()),
       status: Boolean(profile.status),
+      applied: Boolean(profile.applied),
       createdAt: new Date(profile.createdAt),
       updatedAt: new Date(profile.updatedAt),
       // Convert null to undefined for these properties

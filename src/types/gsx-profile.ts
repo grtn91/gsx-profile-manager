@@ -3,6 +3,7 @@ import { UUID } from "crypto";
 export interface GSXProfile {
     id: UUID,
     status: boolean,
+    applied?: boolean,
     continent: string,
     country: string,
     airportIcaoCode: string,
@@ -25,6 +26,7 @@ export interface File {
 export type ProfileFormData = Omit<GSXProfile, 'id' | 'status' | 'createdAt' | 'updatedAt'>;
 
 export enum SyncStatus {
-    SYNCED = 'Ready to link',
-    NOT_SYNCED = 'Not Selected'
+    READY_TO_LINK = 'Ready to link',
+    NOT_SYNCED = 'Not Selected',
+    SYNCED = 'Linked',
 }

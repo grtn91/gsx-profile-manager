@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { GSXProfile } from '@/types/gsx-profile';
-import { initializeDb, addProfile, updateProfile, deleteProfile, updateProfileStatus, getAllProfiles, closeDb } from '@/lib/db';
+import { initializeDb, addProfile, updateProfile, deleteProfile, updateProfileStatus, getAllProfiles, closeDb, markProfilesAsApplied } from '@/lib/db';
 import { deleteProfileFiles } from '@/lib/fileSystem';
 
 interface ProfileState {
@@ -19,6 +19,7 @@ interface ProfileState {
     getProfileById: (id: string) => GSXProfile | undefined;
     getSyncedProfiles: () => GSXProfile[];
     getAllProfiles: () => Promise<void>;
+    markProfilesAsApplied: (ids: string[]) => Promise<void>;
     getAllAirportIcaoCodes: () => string[];
     getAllAirportDevelopers: () => string[];
     getAllCountries: () => string[];
@@ -137,6 +138,26 @@ export const useProfileStore = create<ProfileState>()(
                     set({
                         isLoading: false,
                         error: error instanceof Error ? error.message : 'Failed to unsync profile'
+                    });
+                    throw error;
+                }
+            },
+
+            markProfilesAsApplied: async (ids: string[]) => {
+                set({ isLoading: true, error: null });
+                try {
+                    await markProfilesAsApplied(ids);
+                    set(state => ({
+                        profiles: state.profiles.map(profile => ({
+                            ...profile,
+                            applied: ids.includes(profile.id)
+                        })),
+                        isLoading: false
+                    }));
+                } catch (error) {
+                    set({
+                        isLoading: false,
+                        error: error instanceof Error ? error.message : 'Failed to mark profiles as applied'
                     });
                     throw error;
                 }
