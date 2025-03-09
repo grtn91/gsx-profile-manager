@@ -3,13 +3,15 @@ import "./components/css/App.css"
 import Header from './components/layouts/Header';
 import { GsxProfilesTable } from './features/profile-table/components/data-table';
 import { invoke } from "@tauri-apps/api/core";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "./components/ui/button";
 import { ShieldAlert } from "lucide-react";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const windowSwitched = useRef(false);
 
   const localDev = import.meta.env.MODE === 'development';
 
@@ -35,6 +37,31 @@ function App() {
 
     checkAdminStatus();
   }, []);
+
+  // Add a new effect that watches the loading and isAdmin states
+  // This will trigger the window switch when loading is done
+  useEffect(() => {
+    const switchToMainWindow = async () => {
+      // Only attempt to switch windows if:
+      // 1. Loading is complete
+      // 2. User has admin rights (or we're bypassing the check)
+      // 3. We haven't already switched windows
+      if (!loading && isAdmin === true && !windowSwitched.current) {
+        try {
+          // Mark that we've attempted the window switch
+          windowSwitched.current = true;
+
+          console.log("App initialization complete, switching to main window");
+          await invoke("switch_to_main_window");
+          console.log("Switched to main window");
+        } catch (error) {
+          console.error("Failed to switch to main window:", error);
+        }
+      }
+    };
+
+    switchToMainWindow();
+  }, [loading, isAdmin]);
 
   const handleRestartAsAdmin = async () => {
     try {

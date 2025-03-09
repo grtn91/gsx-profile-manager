@@ -1,6 +1,6 @@
 [package]
 name = "gsx-profile-manager"
-version = "2.4.1"
+version = "2.4.2"
 description = "A Manager to manage GSX Profiles"
 authors = ["grtn"]
 edition = "2021"
