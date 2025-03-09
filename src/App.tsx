@@ -3,48 +3,65 @@ import "./components/css/App.css"
 import Header from './components/layouts/Header';
 import { GsxProfilesTable } from './features/profile-table/components/data-table';
 import { invoke } from "@tauri-apps/api/core";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "./components/ui/button";
 import { ShieldAlert } from "lucide-react";
-import { Spinner } from "./components/ui/spinner";
 
 function App() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const windowSwitched = useRef(false);
+
   const localDev = import.meta.env.MODE === 'development';
 
-  // Combine the two effects into one to avoid race conditions
   useEffect(() => {
-    const initializeApp = async () => {
+    // Check if the app is running with admin rights
+    const checkAdminStatus = async () => {
+      if (localDev) {
+        setIsAdmin(true);
+        setLoading(false);
+        return;
+      }
       try {
-        // First check admin status
-        let adminStatus = true; // Default to true for safety
-
-        if (!localDev) {
-          try {
-            adminStatus = await invoke<boolean>("is_admin");
-            console.log("Admin check result:", adminStatus);
-          } catch (error) {
-            console.error("Admin check failed:", error);
-          }
-        }
-
-        setIsAdmin(adminStatus);
-
-        // If we have admin rights, load the stores
-        if (adminStatus) {
-          // Simulate loading stores or do real loading
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+        const hasAdminRights = await invoke<boolean>("is_admin");
+        setIsAdmin(hasAdminRights);
+      } catch (error) {
+        console.error("Failed to check admin status:", error);
+        // Default to true if we can't check to avoid blocking the app
+        setIsAdmin(true);
       } finally {
-        // Only set loading to false when everything is done
         setLoading(false);
       }
     };
 
-    initializeApp();
-  }, [localDev]);
+    checkAdminStatus();
+  }, []);
+
+  // Add a new effect that watches the loading and isAdmin states
+  // This will trigger the window switch when loading is done
+  useEffect(() => {
+    const switchToMainWindow = async () => {
+      // Only attempt to switch windows if:
+      // 1. Loading is complete
+      // 2. User has admin rights (or we're bypassing the check)
+      // 3. We haven't already switched windows
+      if (!loading && isAdmin === true && !windowSwitched.current) {
+        try {
+          // Mark that we've attempted the window switch
+          windowSwitched.current = true;
+
+          console.log("App initialization complete, switching to main window");
+          await invoke("switch_to_main_window");
+          console.log("Switched to main window");
+        } catch (error) {
+          console.error("Failed to switch to main window:", error);
+        }
+      }
+    };
+
+    switchToMainWindow();
+  }, [loading, isAdmin]);
 
   const handleRestartAsAdmin = async () => {
     try {
@@ -54,13 +71,12 @@ function App() {
     }
   };
 
-  // Show loading spinner when either loading is true OR admin status is still unknown
-  if (loading || isAdmin === null) {
+  if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-gray-100">
         <div className="text-center">
-          <Spinner size="lg" />
-          <p className="text-gray-600 text-xl">Initializing application...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
@@ -80,18 +96,6 @@ function App() {
             className="w-full bg-blue-600 hover:bg-blue-700"
           >
             Restart as Administrator
-          </Button>
-
-          {/* Add bypass button for users having issues */}
-          <Button
-            onClick={() => {
-              localStorage.setItem('gsx-bypass-admin-check', 'true');
-              setIsAdmin(true);
-            }}
-            variant="outline"
-            className="w-full mt-2"
-          >
-            Continue Anyway (Not Recommended)
           </Button>
         </div>
       </div>
