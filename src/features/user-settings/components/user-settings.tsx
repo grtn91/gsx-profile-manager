@@ -38,7 +38,7 @@ export default function UserSettings({ onClose }: UserSettingsProps) {
         loadProfile();
     }, []);
 
-    const { updateOpenAiApiKey, getOpenAiApiKey } = useUserProfileStore();
+    const { updateOpenAiApiKey } = useUserProfileStore();
 
     const handleSave = async () => {
         try {
