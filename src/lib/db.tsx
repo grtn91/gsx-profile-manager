@@ -7,7 +7,7 @@ import { UserProfile } from '@/types/userProfile';
 let db: Database | null = null;
 
 // Track database version to manage migrations
-const CURRENT_DB_VERSION = 5; // Increment when schema changes
+const CURRENT_DB_VERSION = 8; // Increment when schema changes
 
 export async function initializeDb(): Promise<void> {
   try {
@@ -61,7 +61,7 @@ export async function initializeDb(): Promise<void> {
       await runMigrations(dbVersion);
     }
 
-    console.log('Database initialized successfully');
+    console.log('Database initialized successfully', db);
   } catch (error) {
     console.error('Failed to initialize database:', error);
     throw error;
@@ -161,6 +161,54 @@ async function runMigrations(currentVersion: number): Promise<void> {
         console.log('Added applied column to gsx profiles');
       } else {
         console.log('applied column already exists, skipping');
+      }
+    }
+
+    // Fix Migration 6 to : Add openai key to user_profiles
+    if (currentVersion < 6) {
+      console.log('Applying migration v5 to v6: Add openaiApiKey to user_profiles');
+
+      // Check if the column already exists (for safety)
+      const tableInfo = await db.select<{ name: string }[]>(
+        "PRAGMA table_info(user_profiles)"
+      );
+
+      const columnExists = tableInfo.some(col => col.name === 'openaiApiKey');
+
+      if (!columnExists) {
+        await db.execute(`ALTER TABLE user_profiles ADD COLUMN openaiApiKey TEXT DEFAULT '';`);
+        console.log('Added openaiApiKey column to user_profiles');
+      } else {
+        console.log('openaiApiKey column already exists, skipping');
+      }
+    }
+
+    // Migration 7 to 8: Ensure openaiApiKey exists in user_profiles
+    if (currentVersion = 8) {
+      console.log('Applying migration v7 to v8: Ensuring openaiApiKey exists in user_profiles');
+
+      try {
+        // Check if the column exists
+        const tableInfo = await db.select<{ name: string }[]>(
+          "PRAGMA table_info(user_profiles)"
+        );
+
+        const columnExists = tableInfo.some(col => col.name === 'openaiApiKey');
+
+        if (!columnExists) {
+          console.log('openaiApiKey column is missing, adding it now');
+          await db.execute(`ALTER TABLE user_profiles ADD COLUMN openaiApiKey TEXT DEFAULT '';`);
+          console.log('Added openaiApiKey column to user_profiles');
+
+          // Print the updated schema to verify
+          const updatedSchema = await db.select("PRAGMA table_info(user_profiles)");
+          console.log("Updated user_profiles schema:", updatedSchema);
+        } else {
+          console.log('openaiApiKey column already exists in user_profiles');
+        }
+      } catch (error) {
+        console.error('Error checking/adding openaiApiKey column:', error);
+        throw error; // Rethrow to prevent incomplete migrations
       }
     }
 
@@ -472,6 +520,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
     return {
       id: profile.id,
       simbriefUsername: profile.simbriefUsername || '',
+      openaiApiKey: profile.openaiApiKey || '',
       skipUpdate: Boolean(profile.skipUpdate),
       skipUpdateUntil: profile.skipUpdateUntil ? new Date(profile.skipUpdateUntil) : null,
       communityFolderAirports: JSON.parse(profile.communityFolderAirports || '[]'),
@@ -528,6 +577,11 @@ export async function updateUserProfile(updates: Partial<UserProfile>): Promise<
       values.push(JSON.stringify(updates.communityFolderAirports));
     }
 
+    if ('openaiApiKey' in updates) {  // Changed from checking !null to just checking if the field is present
+      updatedFields.push(`openaiApiKey = $${paramIndex++}`);
+      values.push(updates.openaiApiKey || '');  // Allow empty strings
+    }
+
     if ('ignoredAirports' in updates && updates.ignoredAirports) {
       updatedFields.push(`ignoredAirports = $${paramIndex++}`);
       values.push(JSON.stringify(updates.ignoredAirports));
@@ -557,6 +611,7 @@ async function createDefaultUserProfile(): Promise<UserProfile> {
   const now = new Date();
   const defaultProfile: UserProfile = {
     simbriefUsername: '',
+    openaiApiKey: '',
     skipUpdate: false,
     skipUpdateUntil: null,
     communityFolderAirports: [],
@@ -567,10 +622,11 @@ async function createDefaultUserProfile(): Promise<UserProfile> {
 
   await db.execute(`
     INSERT INTO user_profiles (
-      simbriefUsername, skipUpdate, skipUpdateUntil, communityFolderAirports, ignoredAirports, createdAt, updatedAt
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      simbriefUsername, openaiApiKey, skipUpdate, skipUpdateUntil, communityFolderAirports, ignoredAirports, createdAt, updatedAt
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
   `, [
     defaultProfile.simbriefUsername,
+    defaultProfile.openaiApiKey,
     defaultProfile.skipUpdate ? 1 : 0,
     defaultProfile.skipUpdateUntil?.toISOString() || null,
     JSON.stringify(defaultProfile.communityFolderAirports),
@@ -586,6 +642,7 @@ async function createDefaultUserProfile(): Promise<UserProfile> {
   return {
     id: profile.id,
     simbriefUsername: profile.simbriefUsername,
+    openaiApiKey: profile.openaiApiKey,
     skipUpdate: Boolean(profile.skipUpdate),
     skipUpdateUntil: profile.skipUpdateUntil ? new Date(profile.skipUpdateUntil) : null,
     communityFolderAirports: JSON.parse(profile.communityFolderAirports),

@@ -26,6 +26,7 @@ import {
 import UserSettings from "@/features/user-settings/components/user-settings";
 import AirportProfileMatcher from "@/features/airport-profile-matcher/components/airportProfileMatcher";
 import UpdateChecker from "@/features/update-checker/components/UpdateChecker";
+import SimBriefRoute from "@/features/simbrief-checker/SimBriefRoute";
 
 function Header() {
   // State to control the visibility of the profile uploader modal
@@ -35,6 +36,7 @@ function Header() {
   const [checkingForUpdates, setCheckingForUpdates] = useState(false);
   const [showUpdateChecker, setShowUpdateChecker] = useState(false);
   const [updateData, setUpdateData] = useState<Update | null>(null);
+  const [showSimbriefRoute, setShowSimbriefRoute] = useState(false);
   const { getSyncedProfiles, markProfilesAsApplied } = useProfileStore();
 
   const [showAirportMatcher, setShowAirportMatcher] = useState(false);
@@ -189,7 +191,7 @@ function Header() {
             </DropdownMenuItem>
             <DropdownMenuItem
               className="flex items-center gap-2"
-              disabled={true}
+              onClick={() => setShowSimbriefRoute(true)}
             >
               <UserCog className="h-4 w-4" />
               <span>Get Simbrief Route</span>
@@ -236,7 +238,7 @@ function Header() {
 
       {/* Profile Uploader Modal */}
       <Dialog open={showProfileUploader} onOpenChange={setShowProfileUploader}>
-        <DialogContent className="min-w-fit">
+        <DialogContent className="min-w-[80dvw]">
           <DialogDescription />
           <div className="hidden">
             <DialogHeader>
@@ -249,7 +251,7 @@ function Header() {
 
       {/* User Settings Modal */}
       <Dialog open={showUserSettings} onOpenChange={setShowUserSettings}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="min-w-[80dvw]">
           <DialogHeader>
             <DialogTitle>User Settings</DialogTitle>
             <DialogDescription>
@@ -257,6 +259,19 @@ function Header() {
             </DialogDescription>
           </DialogHeader>
           <UserSettings onClose={() => setShowUserSettings(false)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Add this dialog near the other dialog components */}
+      <Dialog open={showSimbriefRoute} onOpenChange={setShowSimbriefRoute}>
+        <DialogContent className="min-w-[80dvw]">
+          <DialogHeader>
+            <DialogTitle>Simbrief Flight Information</DialogTitle>
+            <DialogDescription>
+              View your current flight plan from Simbrief
+            </DialogDescription>
+          </DialogHeader>
+          <SimBriefRoute onClose={() => setShowSimbriefRoute(false)} />
         </DialogContent>
       </Dialog>
     </header>

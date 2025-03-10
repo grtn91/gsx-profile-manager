@@ -21,6 +21,8 @@ interface UserProfileState {
     setSimbriefUsername: (username: string) => Promise<void>;
     setCommunityFolderAirports: (airports: string[]) => Promise<void>;
     setIgnoredAirports: (ignoredAirports: string[]) => Promise<void>;
+    updateOpenAiApiKey: (openaiApiKey: string) => Promise<void>;
+    getOpenAiApiKey: () => string | null;
 }
 
 export const useUserProfileStore = create<UserProfileState>()(
@@ -41,6 +43,25 @@ export const useUserProfileStore = create<UserProfileState>()(
                     console.error("Failed to load user profile:", error);
                     set({
                         error: error instanceof Error ? error.message : "Failed to load profile",
+                        isLoading: false
+                    });
+                }
+            },
+
+            getOpenAiApiKey: () => {
+                const profile = get().profile;
+                return profile?.openaiApiKey || null;
+            },
+
+            updateOpenAiApiKey: async (openaiApiKey: string) => {
+                try {
+                    set({ isLoading: true, error: null });
+                    const updatedProfile = await updateUserProfile({ openaiApiKey });
+                    set({ profile: updatedProfile, isLoading: false });
+                } catch (error) {
+                    console.error("Failed to update OpenAI API key:", error);
+                    set({
+                        error: error instanceof Error ? error.message : "Failed to update OpenAI API key",
                         isLoading: false
                     });
                 }
