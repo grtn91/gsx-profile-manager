@@ -58,7 +58,7 @@ const NearbyAirportsResponseSchema = z.object({
 
 
 export default function SimBriefRoute({ onClose }: SimBriefRouteProps) {
-    const { profile, getOpenAiApiKey, updateOpenAiApiKey } = useUserProfileStore();
+    const { profile, updateOpenAiApiKey } = useUserProfileStore();
     const { profiles } = useProfileStore();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
