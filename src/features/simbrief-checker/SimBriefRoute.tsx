@@ -312,7 +312,11 @@ export default function SimBriefRoute({ onClose }: SimBriefRouteProps) {
                 airport => !flightAirports.includes(airport.icao.toUpperCase())
             );
 
-            setNearbyAirports(filteredAirports);
+            const filteredByDuplicates = filteredAirports.filter((airport, index, self) =>
+                index === self.findIndex((a) => a.icao.toUpperCase() === airport.icao.toUpperCase())
+            );
+
+            setNearbyAirports(filteredAirports && filteredByDuplicates.length > 0 ? filteredByDuplicates : []);
 
         } catch (err) {
             console.error("Failed to analyze route:", err);
