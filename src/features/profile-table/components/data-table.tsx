@@ -53,6 +53,7 @@ export function GsxProfilesTable() {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [profileToEdit, setProfileToEdit] = useState<GSXProfile | null>(null);
+  const [globalFilter, setGlobalFilter] = React.useState<string>("");
 
   const { profiles, initializeStore } = useProfileStore();
 
@@ -343,10 +344,23 @@ export function GsxProfilesTable() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
+    globalFilterFn: (row, _id, filterValue) => {
+      // Search in the specified columns
+      const searchColumns = ['continent', 'country', 'airportIcaoCode', 'airportDeveloper'];
+      const searchValue = String(filterValue).toLowerCase();
+
+      // Check if any of the searchable columns match the search value
+      return searchColumns.some(column => {
+        const value = String(row.getValue(column) || '').toLowerCase();
+        return value.includes(searchValue);
+      });
+    },
+    onGlobalFilterChange: setGlobalFilter,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
+      globalFilter,
     },
   })
 
@@ -382,11 +396,11 @@ export function GsxProfilesTable() {
         </Dialog>
       </>
         <Input
-          placeholder="Filter by ICAO code..."
-          value={(table.getColumn("airportIcaoCode")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("airportIcaoCode")?.setFilterValue(event.target.value)
-          }
+          placeholder="Search by ICAO, country, continent, or developer..."
+          value={globalFilter}
+          onChange={(event) => {
+            setGlobalFilter(event.target.value);
+          }}
           className="max-w-sm"
         />
         <DropdownMenu>

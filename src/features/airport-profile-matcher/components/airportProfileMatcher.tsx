@@ -2,16 +2,21 @@ import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useProfileStore } from '@/store/useGsxProfileStore';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, RefreshCcw, Download, EyeOff } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCcw, Download, EyeOff, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useUserProfileStore } from '@/store/useUserProfileStore';
 import { open } from '@tauri-apps/plugin-shell';
+import { Input } from '@/components/ui/input';
 
 interface AirportInfo {
     icao: string;
     title: string;
     path: string;
+    folder_type: string;
+    developer: string;
+    fsversion: string;
+    name: string;
 }
 
 interface AirportMatchStatus extends AirportInfo {
@@ -22,6 +27,7 @@ interface AirportMatchStatus extends AirportInfo {
 export default function AirportProfileMatcher({ onClose }: { onClose: () => void }) {
     const [airports, setAirports] = useState<AirportMatchStatus[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const { profiles } = useProfileStore();
     const { setCommunityFolderAirports, setIgnoredAirports } = useUserProfileStore();
     const { profile: userProfile } = useUserProfileStore();
@@ -41,8 +47,17 @@ export default function AirportProfileMatcher({ onClose }: { onClose: () => void
             // Match airports with profiles and mark ignored
             const matchedAirports = airportResults.map(airport => {
                 const hasProfile = profiles.some(profile => {
-                    // Use direct comparison with airportIcaoCode
-                    return profile.airportIcaoCode?.toUpperCase() === airport.icao;
+                    // Match by ICAO code and developer (if available in profile)
+                    const icaoMatch = profile.airportIcaoCode?.toUpperCase() === airport.icao;
+
+                    // If profile has a developer field, match it with the airport's developer
+                    // Otherwise, just match by ICAO
+                    if (profile.airportDeveloper) {
+                        const developerMatch = profile.airportDeveloper.toLowerCase() === airport.developer.toLowerCase();
+                        return icaoMatch && developerMatch;
+                    }
+
+                    return icaoMatch;
                 });
 
                 const isIgnored = ignoredAirports.includes(airport.icao);
@@ -133,6 +148,20 @@ export default function AirportProfileMatcher({ onClose }: { onClose: () => void
     };
 
     const filteredAirports = airports.filter(airport => {
+        // First apply search filter if there's a search query
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const matchesSearch =
+                airport.icao.toLowerCase().includes(query) ||
+                airport.name.toLowerCase().includes(query) ||
+                airport.developer.toLowerCase().includes(query) ||
+                // Include folder_type in the search
+                airport.folder_type.toLowerCase().includes(query);
+
+            if (!matchesSearch) return false;
+        }
+
+        // Then apply tab filters
         if (selectedTab === 'matched') return airport.hasProfile;
         if (selectedTab === 'unmatched') return !airport.hasProfile && !airport.isIgnored;
         if (selectedTab === 'ignored') return airport.isIgnored;
@@ -161,6 +190,17 @@ export default function AirportProfileMatcher({ onClose }: { onClose: () => void
                     <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                     Rescan
                 </Button>
+            </div>
+
+            {/* Search input */}
+            <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Search by ICAO, name, or developer..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8"
+                />
             </div>
 
             {/* Tab navigation */}
@@ -210,9 +250,9 @@ export default function AirportProfileMatcher({ onClose }: { onClose: () => void
                     <ul className="space-y-2">
                         {filteredAirports.map((airport) => (
                             <li
-                                key={airport.icao}
+                                key={`${airport.icao}-${airport.developer}-${airport.folder_type}`}
                                 className={`flex items-center justify-between p-3 rounded-md border ${airport.isIgnored ? 'bg-gray-50 border-gray-200' :
-                                        airport.hasProfile ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                                    airport.hasProfile ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                                     }`}
                             >
                                 <div>
@@ -224,9 +264,17 @@ export default function AirportProfileMatcher({ onClose }: { onClose: () => void
                                         ) : (
                                             <XCircle className="h-5 w-5 text-red-600 mr-2" />
                                         )}
-                                        {airport.icao}
+                                        {airport.icao} - {airport.name}
                                     </div>
-                                    <div className="text-sm text-muted-foreground">{airport.title}</div>
+                                    <div className="text-sm text-muted-foreground">
+                                        <div className="flex flex-col">
+                                            <span>Developer: {airport.developer}</span>
+                                            {airport.fsversion && (
+                                                <span>Version: {airport.fsversion}</span>
+                                            )}
+                                            <span>Type: {airport.folder_type}</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="flex space-x-2">
