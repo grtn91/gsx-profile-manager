@@ -34,8 +34,7 @@ pub fn restart_as_admin(app_handle: AppHandle) -> Result<(), String> {
         let current_exe = std::env::current_exe()
             .map_err(|e| format!("Failed to get current executable path: {}", e))?;
 
-        // Convert to a string with proper escaping for cmd
-        let exe_path = current_exe.to_string_lossy().replace("\\", "\\\\");
+        let exe_path = current_exe.to_string_lossy().to_string();
 
         // Create a temporary VBS script to elevate privileges
         let temp_dir = std::env::temp_dir();
