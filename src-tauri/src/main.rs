@@ -23,9 +23,6 @@ async fn switch_to_main_window(app_handle: tauri::AppHandle) -> Result<(), Strin
         // Show main window first
         main_window.show().map_err(|e| e.to_string())?;
 
-        // Small delay to ensure smooth transition
-        std::thread::sleep(std::time::Duration::from_millis(500));
-
         // Close splash window
         splash_window.close().map_err(|e| e.to_string())?;
 

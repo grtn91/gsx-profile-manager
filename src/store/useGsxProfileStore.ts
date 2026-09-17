@@ -88,7 +88,7 @@ export const useProfileStore = create<ProfileState>()(
                     await deleteProfile(id);
 
                     // Then delete physical files if needed
-                    deleteProfileFiles(id);
+                    await deleteProfileFiles(id);
 
                     // Then update the store
                     set(state => ({

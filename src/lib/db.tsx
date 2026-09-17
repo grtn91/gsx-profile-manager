@@ -184,7 +184,7 @@ async function runMigrations(currentVersion: number): Promise<void> {
     }
 
     // Migration 7 to 8: Ensure openaiApiKey exists in user_profiles
-    if (currentVersion = 8) {
+    if (currentVersion < 8) {
       console.log('Applying migration v7 to v8: Ensuring openaiApiKey exists in user_profiles');
 
       try {
